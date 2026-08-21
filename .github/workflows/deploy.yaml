@@ -30,9 +30,9 @@ jobs:
  
         with:
  
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-to-assume: ${{ secrets.AWS_ARN_ROLE }}
  
-          aws-region: ap-south-1
+          aws-region: us-east-1
  
  
       - run: aws sts get-caller-identity
