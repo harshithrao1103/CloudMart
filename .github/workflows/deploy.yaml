@@ -7,12 +7,19 @@ permissions:
   id-token: write
   contents: read
 
+
 jobs:
+
+  # ==================================================
+  # NETWORK STACK
+  # ==================================================
+
   deploy-network:
     name: Deploy Network Stack
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -39,12 +46,17 @@ jobs:
             --capabilities CAPABILITY_NAMED_IAM
 
 
+  # ==================================================
+  # SECURITY AND IAM STACK
+  # ==================================================
+
   deploy-security-iam:
     name: Deploy Security and IAM Stack
     runs-on: ubuntu-latest
     needs: deploy-network
 
     steps:
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -54,27 +66,54 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ARN_ROLE }}
           aws-region: us-east-1
 
+      - name: Verify AWS identity
+        run: aws sts get-caller-identity
+
       - name: Validate Security IAM Stack
         run: |
           aws cloudformation validate-template \
             --template-body file://cloudformation/Security_IAM_Stack.yaml
 
-      - name: Deploy Security IAM Stack
+      - name: Deploy Security and IAM Stack
         run: |
           aws cloudformation deploy \
             --stack-name cloudmart-security-iam-dev \
-            --template-file "cloudformation/Security_IAM_Stack.yaml" \
+            --template-file cloudformation/Security_IAM_Stack.yaml \
             --parameter-overrides Environment=dev \
             --capabilities CAPABILITY_NAMED_IAM
-    
+
+
+  # ==================================================
+  # DATA / STORAGE STACK
+  # ==================================================
+
   deploy-data:
     name: Deploy Data Storage Stack
     runs-on: ubuntu-latest
     needs: deploy-security-iam
 
     steps:
+
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: main
+
+      # ------------------------------------------------
+      # Verify the exact commit and files available
+      # on the GitHub Actions runner
+      # ------------------------------------------------
+
+      - name: Verify Data Stack File
+        run: |
+          echo "Current commit:"
+          git rev-parse HEAD
+
+          echo "CloudFormation files:"
+          git ls-files cloudformation
+
+          echo "Storage Data Stack:"
+          ls -la cloudformation/Storage_Database_Stack.yaml
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
