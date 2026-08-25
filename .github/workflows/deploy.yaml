@@ -1,38 +1,39 @@
+name: CloudMart Deployment
 
-name: Test AWS Access
- 
- 
 on:
- 
   workflow_dispatch:
- 
- 
+
 permissions:
- 
   id-token: write
- 
   contents: read
- 
- 
+
 jobs:
- 
-  test:
- 
+  deploy-network:
+    name: Deploy Network Stack
     runs-on: ubuntu-latest
- 
- 
+
     steps:
- 
-      - uses: actions/checkout@v4
- 
- 
-      - uses: aws-actions/configure-aws-credentials@v4
- 
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
- 
           role-to-assume: ${{ secrets.AWS_ARN_ROLE }}
- 
           aws-region: us-east-1
- 
- 
-      - run: aws sts get-caller-identity
+
+      - name: Verify AWS identity
+        run: aws sts get-caller-identity
+
+      - name: Validate Network Stack
+        run: |
+          aws cloudformation validate-template \
+            --template-body file://cloudformation/Network_Stack.yaml
+
+      - name: Deploy Network Stack
+        run: |
+          aws cloudformation deploy \
+            --stack-name cloudmart-network-dev \
+            --template-file cloudformation/Network_Stack.yaml \
+            --parameter-overrides Environment=dev \
+            --capabilities CAPABILITY_NAMED_IAM
