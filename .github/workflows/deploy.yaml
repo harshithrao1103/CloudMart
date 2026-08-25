@@ -57,7 +57,7 @@ jobs:
       - name: Validate Security IAM Stack
         run: |
           aws cloudformation validate-template \
-            --template-body file://cloudformation/Security_IAM%20Stack.yaml
+            --template-body file://cloudformation/Security_IAM Stack.yaml
 
       - name: Deploy Security IAM Stack
         run: |
