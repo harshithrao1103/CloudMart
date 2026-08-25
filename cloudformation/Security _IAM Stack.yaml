@@ -1,1 +1,278 @@
 
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: >
+  CloudMart Milestone 2 IAM Stack - Lambda execution roles.
+
+
+Parameters:
+
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - test
+      - prod
+    Description: CloudMart environment name
+
+
+Resources:
+
+  # ==================================================
+  # Lambda Authorizer Role
+  # ==================================================
+
+  LambdaAuthorizerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub CloudMart-${Environment}-LambdaAuthorizerRole
+
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+
+      Policies:
+        - PolicyName: LambdaAuthorizerM2Policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+
+
+  # ==================================================
+  # Product Lambda Role
+  # ==================================================
+
+  ProductLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub CloudMart-${Environment}-ProductLambdaRole
+
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+
+      Policies:
+        - PolicyName: ProductLambdaM2Policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+
+
+  # ==================================================
+  # Order Lambda Role
+  # ==================================================
+
+  OrderLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub CloudMart-${Environment}-OrderLambdaRole
+
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+
+      Policies:
+        - PolicyName: OrderLambdaM2Policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+
+
+  # ==================================================
+  # Statistics Lambda Role
+  # ==================================================
+
+  StatisticsLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub CloudMart-${Environment}-StatisticsLambdaRole
+
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+
+      Policies:
+        - PolicyName: StatisticsLambdaM2Policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+
+
+  # ==================================================
+  # EC2 Security Group
+  # ==================================================
+
+  EC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: CloudMart EC2 security group
+      VpcId:
+        Fn::ImportValue:
+          !Sub CloudMart-${Environment}-VpcId
+
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+
+      Tags:
+        - Key: Name
+          Value: !Sub cloudmart-${Environment}-ec2-sg
+        - Key: Environment
+          Value: !Ref Environment
+
+
+  # ==================================================
+  # Lambda Security Group
+  # ==================================================
+
+  LambdaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: CloudMart Lambda security group
+      VpcId:
+        Fn::ImportValue:
+          !Sub CloudMart-${Environment}-VpcId
+
+      Tags:
+        - Key: Name
+          Value: !Sub cloudmart-${Environment}-lambda-sg
+        - Key: Environment
+          Value: !Ref Environment
+
+
+  # ==================================================
+  # RDS Security Group
+  # ==================================================
+
+  RDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: CloudMart RDS MySQL security group
+      VpcId:
+        Fn::ImportValue:
+          !Sub CloudMart-${Environment}-VpcId
+
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          SourceSecurityGroupId: !Ref LambdaSecurityGroup
+
+      Tags:
+        - Key: Name
+          Value: !Sub cloudmart-${Environment}-rds-sg
+        - Key: Environment
+          Value: !Ref Environment
+
+# ====================================================
+# OUTPUTS
+# ====================================================
+
+Outputs:
+
+  LambdaAuthorizerRoleArn:
+    Description: Lambda Authorizer IAM Role ARN
+    Value: !GetAtt LambdaAuthorizerRole.Arn
+    Export:
+      Name: !Sub CloudMart-${Environment}-LambdaAuthorizerRoleArn
+
+
+  ProductLambdaRoleArn:
+    Description: Product Lambda IAM Role ARN
+    Value: !GetAtt ProductLambdaRole.Arn
+    Export:
+      Name: !Sub CloudMart-${Environment}-ProductLambdaRoleArn
+
+
+  OrderLambdaRoleArn:
+    Description: Order Lambda IAM Role ARN
+    Value: !GetAtt OrderLambdaRole.Arn
+    Export:
+      Name: !Sub CloudMart-${Environment}-OrderLambdaRoleArn
+
+
+  StatisticsLambdaRoleArn:
+    Description: Statistics Lambda IAM Role ARN
+    Value: !GetAtt StatisticsLambdaRole.Arn
+    Export:
+      Name: !Sub CloudMart-${Environment}-StatisticsLambdaRoleArn
+
+  EC2SecurityGroupId:
+    Description: CloudMart EC2 Security Group ID
+    Value: !Ref EC2SecurityGroup
+    Export:
+      Name: !Sub CloudMart-${Environment}-EC2SecurityGroupId
+
+
+  LambdaSecurityGroupId:
+    Description: CloudMart Lambda Security Group ID
+    Value: !Ref LambdaSecurityGroup
+    Export:
+      Name: !Sub CloudMart-${Environment}-LambdaSecurityGroupId
+
+
+  RDSSecurityGroupId:
+    Description: CloudMart RDS Security Group ID
+    Value: !Ref RDSSecurityGroup
+    Export:
+      Name: !Sub CloudMart-${Environment}-RDSSecurityGroupId
