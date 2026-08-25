@@ -87,7 +87,7 @@ jobs:
   # DATA / STORAGE STACK
   # ==================================================
 
-  deploy-data:
+    deploy-data:
     name: Deploy Data Storage Stack
     runs-on: ubuntu-latest
     needs: deploy-security-iam
@@ -98,11 +98,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: main
-
-      # ------------------------------------------------
-      # Verify the exact commit and files available
-      # on the GitHub Actions runner
-      # ------------------------------------------------
 
       - name: Verify Data Stack File
         run: |
@@ -123,6 +118,24 @@ jobs:
 
       - name: Verify AWS identity
         run: aws sts get-caller-identity
+
+      # ------------------------------------------------
+      # Create SSM SecureString parameters
+      # ------------------------------------------------
+
+      - name: Create SSM SecureString Parameters
+        run: |
+          aws ssm put-parameter \
+            --name "/cloudmart/dev/db/password" \
+            --value "${{ secrets.DB_PASSWORD }}" \
+            --type SecureString \
+            --overwrite
+
+          aws ssm put-parameter \
+            --name "/cloudmart/dev/auth/token" \
+            --value "${{ secrets.AUTH_TOKEN }}" \
+            --type SecureString \
+            --overwrite
 
       - name: Validate Data Storage Stack
         run: |

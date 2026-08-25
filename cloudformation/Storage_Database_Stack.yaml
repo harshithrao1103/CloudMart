@@ -2,7 +2,7 @@ AWSTemplateFormatVersion: '2010-09-09'
 
 Description: >
   CloudMart Milestone 2 Data Stack - RDS MySQL,
-  DB subnet group, and SSM Parameter Store.
+  DB subnet group, S3 bucket, and SSM integration.
 
 
 Parameters:
@@ -60,6 +60,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub cloudmart-${Environment}-db-subnet-group
+
         - Key: Environment
           Value: !Ref Environment
 
@@ -81,7 +82,11 @@ Resources:
 
       MasterUsername: !Ref DBUsername
 
-      MasterUserPassword: !Ref DBPassword
+      # Password is stored in SSM Parameter Store
+      # as a SecureString and retrieved securely.
+      MasterUserPassword: !Sub
+        - '{{resolve:ssm-secure:${PasswordParameterName}}}'
+        - PasswordParameterName: !Sub /cloudmart/${Environment}/db/password
 
       DBInstanceClass: db.t3.micro
 
@@ -106,56 +111,10 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub cloudmart-${Environment}-mysql
+
         - Key: Environment
           Value: !Ref Environment
 
-
-  # ==================================================
-  # SSM - DATABASE USERNAME
-  # ==================================================
-
-  DBUsernameParameter:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Name: !Sub /cloudmart/${Environment}/db/username
-      Type: String
-      Value: !Ref DBUsername
-      Description: CloudMart RDS database username
-
-      Tags:
-        Environment: !Ref Environment
-
-
-  # ==================================================
-  # SSM - DATABASE PASSWORD
-  # ==================================================
-
-  DBPasswordParameter:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Name: !Sub /cloudmart/${Environment}/db/password
-      Type: SecureString
-      Value: !Ref DBPassword
-      Description: CloudMart RDS database password
-
-      Tags:
-        Environment: !Ref Environment
-
-
-  # ==================================================
-  # SSM - AUTHENTICATION TOKEN
-  # ==================================================
-
-  AuthTokenParameter:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Name: !Sub /cloudmart/${Environment}/auth/api-token
-      Type: SecureString
-      Value: !Ref AuthToken
-      Description: CloudMart API authentication token
-
-      Tags:
-        Environment: !Ref Environment
 
   # ==================================================
   # S3 REPORTS BUCKET
@@ -164,7 +123,9 @@ Resources:
   CloudMartReportsBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub cloudmart-${Environment}-reports-${AWS::AccountId}
+
+      BucketName:
+        !Sub cloudmart-${Environment}-reports-${AWS::AccountId}
 
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
@@ -174,20 +135,27 @@ Resources:
 
       BucketEncryption:
         ServerSideEncryptionConfiguration:
+
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
 
       Tags:
         - Key: Name
           Value: !Sub cloudmart-${Environment}-reports
+
         - Key: Environment
           Value: !Ref Environment
+
 
 # ====================================================
 # OUTPUTS
 # ====================================================
 
 Outputs:
+
+  # --------------------------------------------------
+  # RDS INSTANCE
+  # --------------------------------------------------
 
   RDSInstanceIdentifier:
     Description: CloudMart RDS instance identifier
@@ -196,12 +164,20 @@ Outputs:
       Name: !Sub CloudMart-${Environment}-RDSInstanceIdentifier
 
 
+  # --------------------------------------------------
+  # RDS ENDPOINT
+  # --------------------------------------------------
+
   RDSEndpoint:
     Description: CloudMart RDS endpoint
     Value: !GetAtt CloudMartRDS.Endpoint.Address
     Export:
       Name: !Sub CloudMart-${Environment}-RDSEndpoint
 
+
+  # --------------------------------------------------
+  # RDS PORT
+  # --------------------------------------------------
 
   RDSPort:
     Description: CloudMart RDS MySQL port
@@ -210,6 +186,10 @@ Outputs:
       Name: !Sub CloudMart-${Environment}-RDSPort
 
 
+  # --------------------------------------------------
+  # DB SUBNET GROUP
+  # --------------------------------------------------
+
   DBSubnetGroupName:
     Description: CloudMart RDS DB subnet group
     Value: !Ref CloudMartDBSubnetGroup
@@ -217,25 +197,9 @@ Outputs:
       Name: !Sub CloudMart-${Environment}-DBSubnetGroupName
 
 
-  DBUsernameParameterName:
-    Description: SSM parameter containing the database username
-    Value: !Ref DBUsernameParameter
-    Export:
-      Name: !Sub CloudMart-${Environment}-DBUsernameParameter
-
-
-  DBPasswordParameterName:
-    Description: SSM SecureString containing the database password
-    Value: !Ref DBPasswordParameter
-    Export:
-      Name: !Sub CloudMart-${Environment}-DBPasswordParameter
-
-
-  AuthTokenParameterName:
-    Description: SSM SecureString containing the API authentication token
-    Value: !Ref AuthTokenParameter
-    Export:
-      Name: !Sub CloudMart-${Environment}-AuthTokenParameter
+  # --------------------------------------------------
+  # S3 BUCKET
+  # --------------------------------------------------
 
   ReportsBucketName:
     Description: CloudMart S3 reports bucket
