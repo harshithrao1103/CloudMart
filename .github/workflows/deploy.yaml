@@ -7,7 +7,6 @@ permissions:
   id-token: write
   contents: read
 
-
 jobs:
 
   # ==================================================
@@ -87,7 +86,7 @@ jobs:
   # DATA / STORAGE STACK
   # ==================================================
 
-    deploy-data:
+  deploy-data:
     name: Deploy Data Storage Stack
     runs-on: ubuntu-latest
     needs: deploy-security-iam
@@ -137,10 +136,18 @@ jobs:
             --type SecureString \
             --overwrite
 
+      # ------------------------------------------------
+      # Validate Data Storage Stack
+      # ------------------------------------------------
+
       - name: Validate Data Storage Stack
         run: |
           aws cloudformation validate-template \
             --template-body file://cloudformation/Storage_Database_Stack.yaml
+
+      # ------------------------------------------------
+      # Deploy Data Storage Stack
+      # ------------------------------------------------
 
       - name: Deploy Data Storage Stack
         run: |
