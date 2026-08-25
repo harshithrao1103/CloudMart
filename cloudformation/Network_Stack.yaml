@@ -1,9 +1,9 @@
-
 AWSTemplateFormatVersion: '2010-09-09'
 
 Description: >
   CloudMart Network Stack - VPC, public and private subnets,
   Internet Gateway, and route tables.
+
 
 Parameters:
 
@@ -26,10 +26,15 @@ Parameters:
     Default: 10.0.1.0/24
     Description: CIDR block for the public subnet
 
-  PrivateSubnetCidr:
+  PrivateSubnet1Cidr:
     Type: String
     Default: 10.0.2.0/24
-    Description: CIDR block for the private subnet
+    Description: CIDR block for the first private subnet
+
+  PrivateSubnet2Cidr:
+    Type: String
+    Default: 10.0.3.0/24
+    Description: CIDR block for the second private subnet
 
 
 Resources:
@@ -81,6 +86,10 @@ Resources:
     Properties:
       VpcId: !Ref CloudMartVPC
       CidrBlock: !Ref PublicSubnetCidr
+      AvailabilityZone:
+        Fn::Select:
+          - 0
+          - Fn::GetAZs: !Ref AWS::Region
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
@@ -92,18 +101,45 @@ Resources:
 
 
   # --------------------------------------------------
-  # Private Subnet
+  # Private Subnet 1
   # --------------------------------------------------
 
-  PrivateSubnet:
+  PrivateSubnet1:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref CloudMartVPC
-      CidrBlock: !Ref PrivateSubnetCidr
+      CidrBlock: !Ref PrivateSubnet1Cidr
+      AvailabilityZone:
+        Fn::Select:
+          - 0
+          - Fn::GetAZs: !Ref AWS::Region
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Sub cloudmart-${Environment}-private-subnet
+          Value: !Sub cloudmart-${Environment}-private-subnet-1
+        - Key: Tier
+          Value: Private
+        - Key: Environment
+          Value: !Ref Environment
+
+
+  # --------------------------------------------------
+  # Private Subnet 2
+  # --------------------------------------------------
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref CloudMartVPC
+      CidrBlock: !Ref PrivateSubnet2Cidr
+      AvailabilityZone:
+        Fn::Select:
+          - 1
+          - Fn::GetAZs: !Ref AWS::Region
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub cloudmart-${Environment}-private-subnet-2
         - Key: Tier
           Value: Private
         - Key: Environment
@@ -165,13 +201,24 @@ Resources:
 
 
   # --------------------------------------------------
-  # Private Subnet Route Table Association
+  # Private Subnet 1 Route Table Association
   # --------------------------------------------------
 
-  PrivateSubnetRouteTableAssociation:
+  PrivateSubnet1RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId: !Ref PrivateSubnet
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRouteTable
+
+
+  # --------------------------------------------------
+  # Private Subnet 2 Route Table Association
+  # --------------------------------------------------
+
+  PrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
       RouteTableId: !Ref PrivateRouteTable
 
 
@@ -195,11 +242,18 @@ Outputs:
       Name: !Sub CloudMart-${Environment}-PublicSubnetId
 
 
-  PrivateSubnetId:
-    Description: CloudMart Private Subnet ID
-    Value: !Ref PrivateSubnet
+  PrivateSubnet1Id:
+    Description: CloudMart Private Subnet 1 ID
+    Value: !Ref PrivateSubnet1
     Export:
-      Name: !Sub CloudMart-${Environment}-PrivateSubnetId
+      Name: !Sub CloudMart-${Environment}-PrivateSubnet1Id
+
+
+  PrivateSubnet2Id:
+    Description: CloudMart Private Subnet 2 ID
+    Value: !Ref PrivateSubnet2
+    Export:
+      Name: !Sub CloudMart-${Environment}-PrivateSubnet2Id
 
 
   PublicRouteTableId:
