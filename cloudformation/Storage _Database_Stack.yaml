@@ -1,1 +1,251 @@
+AWSTemplateFormatVersion: '2010-09-09'
 
+Description: >
+  CloudMart Milestone 2 Data Stack - RDS MySQL,
+  DB subnet group, and SSM Parameter Store.
+
+
+Parameters:
+
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - test
+      - prod
+    Description: CloudMart environment name
+
+  DBName:
+    Type: String
+    Default: cloudmart
+    Description: CloudMart database name
+
+  DBUsername:
+    Type: String
+    Default: admin
+    Description: RDS master username
+
+  DBPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    Description: RDS master password
+
+  AuthToken:
+    Type: String
+    NoEcho: true
+    MinLength: 16
+    Description: CloudMart API authentication token
+
+
+Resources:
+
+  # ==================================================
+  # RDS DB SUBNET GROUP
+  # ==================================================
+
+  CloudMartDBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: CloudMart RDS DB subnet group
+
+      SubnetIds:
+        - Fn::ImportValue:
+            !Sub CloudMart-${Environment}-PrivateSubnet1Id
+
+        - Fn::ImportValue:
+            !Sub CloudMart-${Environment}-PrivateSubnet2Id
+
+      Tags:
+        - Key: Name
+          Value: !Sub cloudmart-${Environment}-db-subnet-group
+        - Key: Environment
+          Value: !Ref Environment
+
+
+  # ==================================================
+  # RDS MYSQL INSTANCE
+  # ==================================================
+
+  CloudMartRDS:
+    Type: AWS::RDS::DBInstance
+    Properties:
+
+      DBInstanceIdentifier:
+        !Sub cloudmart-${Environment}-mysql
+
+      Engine: mysql
+
+      DBName: !Ref DBName
+
+      MasterUsername: !Ref DBUsername
+
+      MasterUserPassword: !Ref DBPassword
+
+      DBInstanceClass: db.t3.micro
+
+      AllocatedStorage: 20
+
+      StorageType: gp3
+
+      PubliclyAccessible: false
+
+      MultiAZ: false
+
+      DBSubnetGroupName: !Ref CloudMartDBSubnetGroup
+
+      VPCSecurityGroups:
+        - Fn::ImportValue:
+            !Sub CloudMart-${Environment}-RDSSecurityGroupId
+
+      BackupRetentionPeriod: 1
+
+      DeletionProtection: false
+
+      Tags:
+        - Key: Name
+          Value: !Sub cloudmart-${Environment}-mysql
+        - Key: Environment
+          Value: !Ref Environment
+
+
+  # ==================================================
+  # SSM - DATABASE USERNAME
+  # ==================================================
+
+  DBUsernameParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /cloudmart/${Environment}/db/username
+      Type: String
+      Value: !Ref DBUsername
+      Description: CloudMart RDS database username
+
+      Tags:
+        Environment: !Ref Environment
+
+
+  # ==================================================
+  # SSM - DATABASE PASSWORD
+  # ==================================================
+
+  DBPasswordParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /cloudmart/${Environment}/db/password
+      Type: SecureString
+      Value: !Ref DBPassword
+      Description: CloudMart RDS database password
+
+      Tags:
+        Environment: !Ref Environment
+
+
+  # ==================================================
+  # SSM - AUTHENTICATION TOKEN
+  # ==================================================
+
+  AuthTokenParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /cloudmart/${Environment}/auth/api-token
+      Type: SecureString
+      Value: !Ref AuthToken
+      Description: CloudMart API authentication token
+
+      Tags:
+        Environment: !Ref Environment
+
+  # ==================================================
+  # S3 REPORTS BUCKET
+  # ==================================================
+
+  CloudMartReportsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub cloudmart-${Environment}-reports-${AWS::AccountId}
+
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+      Tags:
+        - Key: Name
+          Value: !Sub cloudmart-${Environment}-reports
+        - Key: Environment
+          Value: !Ref Environment
+
+# ====================================================
+# OUTPUTS
+# ====================================================
+
+Outputs:
+
+  RDSInstanceIdentifier:
+    Description: CloudMart RDS instance identifier
+    Value: !Ref CloudMartRDS
+    Export:
+      Name: !Sub CloudMart-${Environment}-RDSInstanceIdentifier
+
+
+  RDSEndpoint:
+    Description: CloudMart RDS endpoint
+    Value: !GetAtt CloudMartRDS.Endpoint.Address
+    Export:
+      Name: !Sub CloudMart-${Environment}-RDSEndpoint
+
+
+  RDSPort:
+    Description: CloudMart RDS MySQL port
+    Value: !GetAtt CloudMartRDS.Endpoint.Port
+    Export:
+      Name: !Sub CloudMart-${Environment}-RDSPort
+
+
+  DBSubnetGroupName:
+    Description: CloudMart RDS DB subnet group
+    Value: !Ref CloudMartDBSubnetGroup
+    Export:
+      Name: !Sub CloudMart-${Environment}-DBSubnetGroupName
+
+
+  DBUsernameParameterName:
+    Description: SSM parameter containing the database username
+    Value: !Ref DBUsernameParameter
+    Export:
+      Name: !Sub CloudMart-${Environment}-DBUsernameParameter
+
+
+  DBPasswordParameterName:
+    Description: SSM SecureString containing the database password
+    Value: !Ref DBPasswordParameter
+    Export:
+      Name: !Sub CloudMart-${Environment}-DBPasswordParameter
+
+
+  AuthTokenParameterName:
+    Description: SSM SecureString containing the API authentication token
+    Value: !Ref AuthTokenParameter
+    Export:
+      Name: !Sub CloudMart-${Environment}-AuthTokenParameter
+
+  ReportsBucketName:
+    Description: CloudMart S3 reports bucket
+    Value: !Ref CloudMartReportsBucket
+    Export:
+      Name: !Sub CloudMart-${Environment}-ReportsBucketName
+
+
+  ReportsBucketArn:
+    Description: CloudMart S3 reports bucket ARN
+    Value: !GetAtt CloudMartReportsBucket.Arn
+    Export:
+      Name: !Sub CloudMart-${Environment}-ReportsBucketArn
