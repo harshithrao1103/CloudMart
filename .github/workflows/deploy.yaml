@@ -57,12 +57,12 @@ jobs:
       - name: Validate Security IAM Stack
         run: |
           aws cloudformation validate-template \
-            --template-body file://cloudformation/Security_IAM Stack.yaml
+            --template-body file://cloudformation/Security_IAM_Stack.yaml
 
       - name: Deploy Security IAM Stack
         run: |
           aws cloudformation deploy \
             --stack-name cloudmart-security-iam-dev \
-            --template-file "cloudformation/Security_IAM Stack.yaml" \
+            --template-file "cloudformation/Security_IAM_Stack.yaml" \
             --parameter-overrides Environment=dev \
             --capabilities CAPABILITY_NAMED_IAM
