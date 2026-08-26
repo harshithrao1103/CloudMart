@@ -2,7 +2,7 @@ AWSTemplateFormatVersion: '2010-09-09'
 
 Description: >
   CloudMart Network Stack - VPC, public and private subnets,
-  Internet Gateway, and route tables.
+  Internet Gateway, route tables, and SSM VPC endpoint.
 
 
 Parameters:
@@ -172,19 +172,24 @@ Resources:
       VpcId: !Ref CloudMartVPC
 
       SecurityGroupIngress:
+
+        # Allow HTTPS from Private Subnet 1
         - IpProtocol: tcp
           FromPort: 443
           ToPort: 443
-          SourceSecurityGroupId:
-            Fn::ImportValue:
-              !Sub CloudMart-${Environment}-LambdaSecurityGroupId
+          CidrIp: !Ref PrivateSubnet1Cidr
+
+        # Allow HTTPS from Private Subnet 2
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref PrivateSubnet2Cidr
 
       Tags:
         - Key: Name
           Value: !Sub cloudmart-${Environment}-ssm-endpoint-sg
         - Key: Environment
           Value: !Ref Environment
-
 
 
   # --------------------------------------------------
