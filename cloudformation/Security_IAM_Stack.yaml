@@ -1,4 +1,3 @@
-
 AWSTemplateFormatVersion: '2010-09-09'
 
 Description: >
@@ -110,12 +109,19 @@ Resources:
             Version: '2012-10-17'
             Statement:
 
+              # CloudWatch Logs
               - Effect: Allow
                 Action:
                   - logs:CreateLogGroup
                   - logs:CreateLogStream
                   - logs:PutLogEvents
                 Resource: '*'
+
+              # SSM database password
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/cloudmart/${Environment}/db/password
 
 
   # ==================================================
@@ -152,18 +158,20 @@ Resources:
 
 
   # ==================================================
-  # EC2 Security Group
+  # EC2 SECURITY GROUP
   # ==================================================
 
   EC2SecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: CloudMart EC2 security group
+
       VpcId:
         Fn::ImportValue:
           !Sub CloudMart-${Environment}-VpcId
 
       SecurityGroupIngress:
+
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
@@ -177,18 +185,20 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub cloudmart-${Environment}-ec2-sg
+
         - Key: Environment
           Value: !Ref Environment
 
 
   # ==================================================
-  # Lambda Security Group
+  # LAMBDA SECURITY GROUP
   # ==================================================
 
   LambdaSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: CloudMart Lambda security group
+
       VpcId:
         Fn::ImportValue:
           !Sub CloudMart-${Environment}-VpcId
@@ -196,23 +206,26 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub cloudmart-${Environment}-lambda-sg
+
         - Key: Environment
           Value: !Ref Environment
 
 
   # ==================================================
-  # RDS Security Group
+  # RDS SECURITY GROUP
   # ==================================================
 
   RDSSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: CloudMart RDS MySQL security group
+
       VpcId:
         Fn::ImportValue:
           !Sub CloudMart-${Environment}-VpcId
 
       SecurityGroupIngress:
+
         - IpProtocol: tcp
           FromPort: 3306
           ToPort: 3306
@@ -221,8 +234,10 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub cloudmart-${Environment}-rds-sg
+
         - Key: Environment
           Value: !Ref Environment
+
 
 # ====================================================
 # OUTPUTS
@@ -256,6 +271,7 @@ Outputs:
     Value: !GetAtt StatisticsLambdaRole.Arn
     Export:
       Name: !Sub CloudMart-${Environment}-StatisticsLambdaRoleArn
+
 
   EC2SecurityGroupId:
     Description: CloudMart EC2 Security Group ID
