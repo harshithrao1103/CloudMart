@@ -162,6 +162,60 @@ Resources:
 
 
   # --------------------------------------------------
+  # SSM VPC Endpoint Security Group
+  # --------------------------------------------------
+
+  SSMEndpointSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: CloudMart SSM VPC Endpoint security group
+      VpcId: !Ref CloudMartVPC
+
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          SourceSecurityGroupId:
+            Fn::ImportValue:
+              !Sub CloudMart-${Environment}-LambdaSecurityGroupId
+
+      Tags:
+        - Key: Name
+          Value: !Sub cloudmart-${Environment}-ssm-endpoint-sg
+        - Key: Environment
+          Value: !Ref Environment
+
+
+
+  # --------------------------------------------------
+  # SSM Interface VPC Endpoint
+  # --------------------------------------------------
+
+  SSMVpcEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref CloudMartVPC
+      VpcEndpointType: Interface
+
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ssm
+
+      PrivateDnsEnabled: true
+
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+
+      SecurityGroupIds:
+        - !Ref SSMEndpointSecurityGroup
+
+      Tags:
+        - Key: Name
+          Value: !Sub cloudmart-${Environment}-ssm-endpoint
+        - Key: Environment
+          Value: !Ref Environment
+
+
+  # --------------------------------------------------
   # Public Route to Internet Gateway
   # --------------------------------------------------
 
@@ -268,3 +322,10 @@ Outputs:
     Value: !Ref PrivateRouteTable
     Export:
       Name: !Sub CloudMart-${Environment}-PrivateRouteTableId
+
+
+  SSMVpcEndpointId:
+    Description: CloudMart SSM VPC Interface Endpoint ID
+    Value: !Ref SSMVpcEndpoint
+    Export:
+      Name: !Sub CloudMart-${Environment}-SSMVpcEndpointId
