@@ -1,1 +1,395 @@
+AWSTemplateFormatVersion: '2010-09-09'
 
+Transform:
+  - AWS::Serverless-2016-10-31
+
+Description: >
+  CloudMart Milestone 3 Application Stack -
+  API Gateway, Lambda Authorizer, Product service,
+  EventBridge and SNS low-stock alerts.
+
+
+# ============================================================
+# PARAMETERS
+# ============================================================
+
+Parameters:
+
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - test
+      - prod
+    Description: CloudMart environment name
+
+  NotificationEmail:
+    Type: String
+    Description: Email address for CloudMart low-stock alerts
+
+
+# ============================================================
+# RESOURCES
+# ============================================================
+
+Resources:
+
+  # ==========================================================
+  # PYMYSQL LAMBDA LAYER
+  # ==========================================================
+
+  PyMySQLLayer:
+    Type: AWS::Serverless::LayerVersion
+
+    Properties:
+      LayerName: !Sub cloudmart-${Environment}-pymysql
+
+      Description: >
+        Shared PyMySQL dependency for CloudMart Lambda functions
+
+      ContentUri: ../layers/pymysql/
+
+      CompatibleRuntimes:
+        - python3.13
+
+    Metadata:
+      BuildMethod: python3.13
+
+
+  # ==========================================================
+  # LAMBDA AUTHORISER
+  # ==========================================================
+
+  AuthorizerLambda:
+    Type: AWS::Serverless::Function
+
+    Properties:
+
+      FunctionName: !Sub cloudmart-${Environment}-authorizer
+
+      CodeUri: ../lambda/authorizer/
+
+      Handler: authorizer_lambda.lambda_handler
+
+      Runtime: python3.13
+
+      Timeout: 10
+
+      MemorySize: 128
+
+      Role:
+        Fn::ImportValue:
+          !Sub CloudMart-${Environment}-LambdaAuthorizerRoleArn
+
+      Environment:
+        Variables:
+
+          AUTH_TOKEN_PARAMETER:
+            !Sub /cloudmart/${Environment}/auth/token
+
+
+  # ==========================================================
+  # PRODUCT LAMBDA
+  # ==========================================================
+
+  ProductLambda:
+    Type: AWS::Serverless::Function
+
+    Properties:
+
+      FunctionName: !Sub cloudmart-${Environment}-product
+
+      CodeUri: ../lambda/product/
+
+      Handler: product_lambda.lambda_handler
+
+      Runtime: python3.13
+
+      Timeout: 30
+
+      MemorySize: 256
+
+      Role:
+        Fn::ImportValue:
+          !Sub CloudMart-${Environment}-ProductLambdaRoleArn
+
+      Layers:
+        - !Ref PyMySQLLayer
+
+      VpcConfig:
+
+        SecurityGroupIds:
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-LambdaSecurityGroupId
+
+        SubnetIds:
+
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-PrivateSubnet1Id
+
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-PrivateSubnet2Id
+
+      Environment:
+        Variables:
+
+          RDS_HOST:
+            Fn::ImportValue:
+              !Sub CloudMart-${Environment}-RDSEndpoint
+
+          DB_NAME: cloudmart
+
+          DB_USER: admin
+
+          DB_PASSWORD_PARAMETER:
+            !Sub /cloudmart/${Environment}/db/password
+
+          EVENT_BUS_NAME: default
+
+      Events:
+
+        # ======================================================
+        # POST /products
+        # ======================================================
+
+        CreateProduct:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CloudMartApi
+            Path: /products
+            Method: post
+
+
+        # ======================================================
+        # GET /products
+        # ======================================================
+
+        GetProducts:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CloudMartApi
+            Path: /products
+            Method: get
+
+
+        # ======================================================
+        # GET /products/{productId}
+        # ======================================================
+
+        GetProduct:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CloudMartApi
+            Path: /products/{productId}
+            Method: get
+
+
+        # ======================================================
+        # PUT /products/{productId}
+        # ======================================================
+
+        UpdateProduct:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CloudMartApi
+            Path: /products/{productId}
+            Method: put
+
+
+        # ======================================================
+        # DELETE /products/{productId}
+        # ======================================================
+
+        DeleteProduct:
+          Type: Api
+          Properties:
+            RestApiId: !Ref CloudMartApi
+            Path: /products/{productId}
+            Method: delete
+
+
+  # ==========================================================
+  # API GATEWAY
+  # ==========================================================
+
+  CloudMartApi:
+    Type: AWS::Serverless::Api
+
+    Properties:
+
+      Name: !Sub cloudmart-${Environment}-api
+
+      StageName: !Ref Environment
+
+      EndpointConfiguration:
+        Type: REGIONAL
+
+      Auth:
+
+        DefaultAuthorizer: CloudMartAuthorizer
+
+        Authorizers:
+
+          CloudMartAuthorizer:
+
+            FunctionArn: !GetAtt AuthorizerLambda.Arn
+
+            FunctionPayloadType: REQUEST
+
+            EnableSimpleResponses: true
+
+            AuthorizerResultTtlInSeconds: 300
+
+            Identity:
+
+              Headers:
+                - Authorization
+
+
+  # ==========================================================
+  # SNS LOW-STOCK TOPIC
+  # ==========================================================
+
+  LowStockTopic:
+    Type: AWS::SNS::Topic
+
+    Properties:
+
+      TopicName: !Sub cloudmart-${Environment}-low-stock
+
+      DisplayName: CloudMart Low Stock Alerts
+
+
+  # ==========================================================
+  # SNS EMAIL SUBSCRIPTION
+  # ==========================================================
+
+  LowStockEmailSubscription:
+    Type: AWS::SNS::Subscription
+
+    Properties:
+
+      TopicArn: !Ref LowStockTopic
+
+      Protocol: email
+
+      Endpoint: !Ref NotificationEmail
+
+
+  # ==========================================================
+  # EVENTBRIDGE LOW-STOCK RULE
+  # ==========================================================
+
+  LowStockRule:
+    Type: AWS::Events::Rule
+
+    Properties:
+
+      Name: !Sub cloudmart-${Environment}-low-stock
+
+      Description: >
+        Sends an SNS notification when product inventory
+        falls below the configured low-stock threshold
+
+      State: ENABLED
+
+      EventPattern:
+
+        source:
+          - cloudmart.product
+
+        detail-type:
+          - Inventory Changed
+
+        detail:
+
+          low_stock:
+            - true
+
+      Targets:
+
+        - Arn: !Ref LowStockTopic
+
+          Id: LowStockSNSTarget
+
+
+  # ==========================================================
+  # EVENTBRIDGE → SNS PERMISSION
+  # ==========================================================
+
+  LowStockTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+
+    Properties:
+
+      Topics:
+        - !Ref LowStockTopic
+
+      PolicyDocument:
+
+        Version: '2012-10-17'
+
+        Statement:
+
+          - Sid: AllowEventBridgePublish
+
+            Effect: Allow
+
+            Principal:
+              Service: events.amazonaws.com
+
+            Action:
+              - sns:Publish
+
+            Resource: !Ref LowStockTopic
+
+            Condition:
+
+              ArnEquals:
+
+                aws:SourceArn:
+                  - !GetAtt LowStockRule.Arn
+
+
+# ============================================================
+# OUTPUTS
+# ============================================================
+
+Outputs:
+
+  ApiUrl:
+    Description: CloudMart API Gateway URL
+
+    Value:
+      !Sub https://${CloudMartApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}
+
+    Export:
+      Name: !Sub CloudMart-${Environment}-ApiUrl
+
+
+  ProductLambdaArn:
+    Description: Product Lambda ARN
+
+    Value: !GetAtt ProductLambda.Arn
+
+    Export:
+      Name: !Sub CloudMart-${Environment}-ProductLambdaArn
+
+
+  AuthorizerLambdaArn:
+    Description: Lambda Authorizer ARN
+
+    Value: !GetAtt AuthorizerLambda.Arn
+
+    Export:
+      Name: !Sub CloudMart-${Environment}-AuthorizerLambdaArn
+
+
+  LowStockTopicArn:
+    Description: SNS Low Stock Topic ARN
+
+    Value: !Ref LowStockTopic
+
+    Export:
+      Name: !Sub CloudMart-${Environment}-LowStockTopicArn

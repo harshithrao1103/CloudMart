@@ -161,3 +161,72 @@ jobs:
               DBPassword="${{ secrets.DB_PASSWORD }}" \
               AuthToken="${{ secrets.AUTH_TOKEN }}" \
             --capabilities CAPABILITY_NAMED_IAM
+
+
+  # ==================================================
+  # APPLICATION STACK - MILESTONE 3
+  # ==================================================
+
+  deploy-application:
+    name: Deploy Application Stack
+    runs-on: ubuntu-latest
+    needs: deploy-data
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ------------------------------------------------
+      # Configure AWS
+      # ------------------------------------------------
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ARN_ROLE }}
+          aws-region: us-east-1
+
+      - name: Verify AWS identity
+        run: aws sts get-caller-identity
+
+      # ------------------------------------------------
+      # Install AWS SAM CLI
+      # ------------------------------------------------
+
+      - name: Setup SAM CLI
+        uses: aws-actions/setup-sam@v2
+
+      # ------------------------------------------------
+      # Validate SAM template
+      # ------------------------------------------------
+
+      - name: Validate SAM Application Stack
+        run: |
+          sam validate \
+            --template-file cloudformation/Application_Stack.yaml
+
+      # ------------------------------------------------
+      # Build SAM application
+      # ------------------------------------------------
+
+      - name: Build SAM Application
+        run: |
+          sam build \
+            --template-file cloudformation/Application_Stack.yaml
+
+      # ------------------------------------------------
+      # Deploy SAM application
+      # ------------------------------------------------
+
+      - name: Deploy SAM Application
+        run: |
+          sam deploy \
+            --template-file .aws-sam/build/template.yaml \
+            --stack-name cloudmart-application-dev \
+            --capabilities CAPABILITY_IAM \
+            --parameter-overrides \
+              Environment=dev \
+              NotificationEmail="${{ secrets.NOTIFICATION_EMAIL }}" \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset

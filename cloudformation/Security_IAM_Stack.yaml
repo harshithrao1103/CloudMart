@@ -43,12 +43,19 @@ Resources:
             Version: '2012-10-17'
             Statement:
 
+              # CloudWatch Logs
               - Effect: Allow
                 Action:
                   - logs:CreateLogGroup
                   - logs:CreateLogStream
                   - logs:PutLogEvents
                 Resource: '*'
+
+              # Read authentication token from SSM
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/cloudmart/${Environment}/auth/token
 
 
   # ==================================================
@@ -76,11 +83,86 @@ Resources:
             Version: '2012-10-17'
             Statement:
 
+              # CloudWatch Logs
               - Effect: Allow
                 Action:
                   - logs:CreateLogGroup
                   - logs:CreateLogStream
                   - logs:PutLogEvents
+                Resource: '*'
+
+              # SSM database password
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/cloudmart/${Environment}/db/password
+
+              # Lambda VPC networking
+              - Effect: Allow
+                Action:
+                  - ec2:CreateNetworkInterface
+                  - ec2:DescribeNetworkInterfaces
+                  - ec2:DescribeSubnets
+                  - ec2:DeleteNetworkInterface
+                  - ec2:AssignPrivateIpAddresses
+                  - ec2:UnassignPrivateIpAddresses
+                Resource: '*'
+
+              # Publish inventory events to EventBridge
+              - Effect: Allow
+                Action:
+                  - events:PutEvents
+                Resource: '*'
+
+
+  # ==================================================
+  # Customer Lambda Role
+  # ==================================================
+
+  CustomerLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub CloudMart-${Environment}-CustomerLambdaRole
+
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+
+      Policies:
+        - PolicyName: CustomerLambdaM2Policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+
+              # CloudWatch Logs
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+
+              # SSM database password
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/cloudmart/${Environment}/db/password
+
+              # Lambda VPC networking
+              - Effect: Allow
+                Action:
+                  - ec2:CreateNetworkInterface
+                  - ec2:DescribeNetworkInterfaces
+                  - ec2:DescribeSubnets
+                  - ec2:DeleteNetworkInterface
+                  - ec2:AssignPrivateIpAddresses
+                  - ec2:UnassignPrivateIpAddresses
                 Resource: '*'
 
 
@@ -115,7 +197,6 @@ Resources:
                   - logs:CreateLogGroup
                   - logs:CreateLogStream
                   - logs:PutLogEvents
-                  
                 Resource: '*'
 
               # SSM database password
@@ -124,6 +205,7 @@ Resources:
                   - ssm:GetParameter
                 Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/cloudmart/${Environment}/db/password
 
+              # Lambda VPC networking
               - Effect: Allow
                 Action:
                   - ec2:CreateNetworkInterface
@@ -132,9 +214,7 @@ Resources:
                   - ec2:DeleteNetworkInterface
                   - ec2:AssignPrivateIpAddresses
                   - ec2:UnassignPrivateIpAddresses
-                Resource: '*' 
-
-
+                Resource: '*'
 
 
   # ==================================================
@@ -162,6 +242,7 @@ Resources:
             Version: '2012-10-17'
             Statement:
 
+              # CloudWatch Logs
               - Effect: Allow
                 Action:
                   - logs:CreateLogGroup
@@ -270,6 +351,13 @@ Outputs:
     Value: !GetAtt ProductLambdaRole.Arn
     Export:
       Name: !Sub CloudMart-${Environment}-ProductLambdaRoleArn
+
+
+  CustomerLambdaRoleArn:
+    Description: Customer Lambda IAM Role ARN
+    Value: !GetAtt CustomerLambdaRole.Arn
+    Export:
+      Name: !Sub CloudMart-${Environment}-CustomerLambdaRoleArn
 
 
   OrderLambdaRoleArn:
