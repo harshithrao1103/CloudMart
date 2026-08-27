@@ -2,7 +2,7 @@ AWSTemplateFormatVersion: '2010-09-09'
 
 Description: >
   CloudMart Network Stack - VPC, public and private subnets,
-  Internet Gateway, route tables, and SSM VPC endpoint.
+  Internet Gateway, route tables, SSM and EventBridge VPC endpoints.
 
 
 Parameters:
@@ -49,9 +49,11 @@ Resources:
       CidrBlock: !Ref VpcCidr
       EnableDnsSupport: true
       EnableDnsHostnames: true
+
       Tags:
         - Key: Name
           Value: !Sub cloudmart-${Environment}-vpc
+
         - Key: Environment
           Value: !Ref Environment
 
@@ -62,16 +64,19 @@ Resources:
 
   InternetGateway:
     Type: AWS::EC2::InternetGateway
+
     Properties:
       Tags:
         - Key: Name
           Value: !Sub cloudmart-${Environment}-igw
+
         - Key: Environment
           Value: !Ref Environment
 
 
   AttachInternetGateway:
     Type: AWS::EC2::VPCGatewayAttachment
+
     Properties:
       VpcId: !Ref CloudMartVPC
       InternetGatewayId: !Ref InternetGateway
@@ -83,19 +88,26 @@ Resources:
 
   PublicSubnet:
     Type: AWS::EC2::Subnet
+
     Properties:
       VpcId: !Ref CloudMartVPC
+
       CidrBlock: !Ref PublicSubnetCidr
+
       AvailabilityZone:
         Fn::Select:
           - 0
           - Fn::GetAZs: !Ref AWS::Region
+
       MapPublicIpOnLaunch: true
+
       Tags:
         - Key: Name
           Value: !Sub cloudmart-${Environment}-public-subnet
+
         - Key: Tier
           Value: Public
+
         - Key: Environment
           Value: !Ref Environment
 
@@ -106,19 +118,26 @@ Resources:
 
   PrivateSubnet1:
     Type: AWS::EC2::Subnet
+
     Properties:
       VpcId: !Ref CloudMartVPC
+
       CidrBlock: !Ref PrivateSubnet1Cidr
+
       AvailabilityZone:
         Fn::Select:
           - 0
           - Fn::GetAZs: !Ref AWS::Region
+
       MapPublicIpOnLaunch: false
+
       Tags:
         - Key: Name
           Value: !Sub cloudmart-${Environment}-private-subnet-1
+
         - Key: Tier
           Value: Private
+
         - Key: Environment
           Value: !Ref Environment
 
@@ -129,19 +148,26 @@ Resources:
 
   PrivateSubnet2:
     Type: AWS::EC2::Subnet
+
     Properties:
       VpcId: !Ref CloudMartVPC
+
       CidrBlock: !Ref PrivateSubnet2Cidr
+
       AvailabilityZone:
         Fn::Select:
           - 1
           - Fn::GetAZs: !Ref AWS::Region
+
       MapPublicIpOnLaunch: false
+
       Tags:
         - Key: Name
           Value: !Sub cloudmart-${Environment}-private-subnet-2
+
         - Key: Tier
           Value: Private
+
         - Key: Environment
           Value: !Ref Environment
 
@@ -152,11 +178,14 @@ Resources:
 
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
+
     Properties:
       VpcId: !Ref CloudMartVPC
+
       Tags:
         - Key: Name
           Value: !Sub cloudmart-${Environment}-public-rt
+
         - Key: Environment
           Value: !Ref Environment
 
@@ -167,8 +196,10 @@ Resources:
 
   SSMEndpointSecurityGroup:
     Type: AWS::EC2::SecurityGroup
+
     Properties:
       GroupDescription: CloudMart SSM VPC Endpoint security group
+
       VpcId: !Ref CloudMartVPC
 
       SecurityGroupIngress:
@@ -188,6 +219,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub cloudmart-${Environment}-ssm-endpoint-sg
+
         - Key: Environment
           Value: !Ref Environment
 
@@ -198,8 +230,10 @@ Resources:
 
   SSMVpcEndpoint:
     Type: AWS::EC2::VPCEndpoint
+
     Properties:
       VpcId: !Ref CloudMartVPC
+
       VpcEndpointType: Interface
 
       ServiceName: !Sub com.amazonaws.${AWS::Region}.ssm
@@ -216,6 +250,72 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub cloudmart-${Environment}-ssm-endpoint
+
+        - Key: Environment
+          Value: !Ref Environment
+
+
+  # --------------------------------------------------
+  # EventBridge VPC Endpoint Security Group
+  # --------------------------------------------------
+
+  EventBridgeEndpointSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+
+    Properties:
+      GroupDescription: CloudMart EventBridge VPC Endpoint security group
+
+      VpcId: !Ref CloudMartVPC
+
+      SecurityGroupIngress:
+
+        # Allow HTTPS from Private Subnet 1
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref PrivateSubnet1Cidr
+
+        # Allow HTTPS from Private Subnet 2
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref PrivateSubnet2Cidr
+
+      Tags:
+        - Key: Name
+          Value: !Sub cloudmart-${Environment}-eventbridge-endpoint-sg
+
+        - Key: Environment
+          Value: !Ref Environment
+
+
+  # --------------------------------------------------
+  # EventBridge Interface VPC Endpoint
+  # --------------------------------------------------
+
+  EventBridgeVpcEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+
+    Properties:
+      VpcId: !Ref CloudMartVPC
+
+      VpcEndpointType: Interface
+
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.events
+
+      PrivateDnsEnabled: true
+
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+
+      SecurityGroupIds:
+        - !Ref EventBridgeEndpointSecurityGroup
+
+      Tags:
+        - Key: Name
+          Value: !Sub cloudmart-${Environment}-eventbridge-endpoint
+
         - Key: Environment
           Value: !Ref Environment
 
@@ -226,10 +326,14 @@ Resources:
 
   PublicRoute:
     Type: AWS::EC2::Route
+
     DependsOn: AttachInternetGateway
+
     Properties:
       RouteTableId: !Ref PublicRouteTable
+
       DestinationCidrBlock: 0.0.0.0/0
+
       GatewayId: !Ref InternetGateway
 
 
@@ -239,8 +343,10 @@ Resources:
 
   PublicSubnetRouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
+
     Properties:
       SubnetId: !Ref PublicSubnet
+
       RouteTableId: !Ref PublicRouteTable
 
 
@@ -250,11 +356,14 @@ Resources:
 
   PrivateRouteTable:
     Type: AWS::EC2::RouteTable
+
     Properties:
       VpcId: !Ref CloudMartVPC
+
       Tags:
         - Key: Name
           Value: !Sub cloudmart-${Environment}-private-rt
+
         - Key: Environment
           Value: !Ref Environment
 
@@ -265,8 +374,10 @@ Resources:
 
   PrivateSubnet1RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
+
     Properties:
       SubnetId: !Ref PrivateSubnet1
+
       RouteTableId: !Ref PrivateRouteTable
 
 
@@ -276,8 +387,10 @@ Resources:
 
   PrivateSubnet2RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
+
     Properties:
       SubnetId: !Ref PrivateSubnet2
+
       RouteTableId: !Ref PrivateRouteTable
 
 
@@ -289,48 +402,71 @@ Outputs:
 
   VpcId:
     Description: CloudMart VPC ID
+
     Value: !Ref CloudMartVPC
+
     Export:
       Name: !Sub CloudMart-${Environment}-VpcId
 
 
   PublicSubnetId:
     Description: CloudMart Public Subnet ID
+
     Value: !Ref PublicSubnet
+
     Export:
       Name: !Sub CloudMart-${Environment}-PublicSubnetId
 
 
   PrivateSubnet1Id:
     Description: CloudMart Private Subnet 1 ID
+
     Value: !Ref PrivateSubnet1
+
     Export:
       Name: !Sub CloudMart-${Environment}-PrivateSubnet1Id
 
 
   PrivateSubnet2Id:
     Description: CloudMart Private Subnet 2 ID
+
     Value: !Ref PrivateSubnet2
+
     Export:
       Name: !Sub CloudMart-${Environment}-PrivateSubnet2Id
 
 
   PublicRouteTableId:
     Description: CloudMart Public Route Table ID
+
     Value: !Ref PublicRouteTable
+
     Export:
       Name: !Sub CloudMart-${Environment}-PublicRouteTableId
 
 
   PrivateRouteTableId:
     Description: CloudMart Private Route Table ID
+
     Value: !Ref PrivateRouteTable
+
     Export:
       Name: !Sub CloudMart-${Environment}-PrivateRouteTableId
 
 
   SSMVpcEndpointId:
     Description: CloudMart SSM VPC Interface Endpoint ID
+
     Value: !Ref SSMVpcEndpoint
+
     Export:
       Name: !Sub CloudMart-${Environment}-SSMVpcEndpointId
+
+
+  EventBridgeVpcEndpointId:
+    Description: CloudMart EventBridge VPC Interface Endpoint ID
+
+    Value: !Ref EventBridgeVpcEndpoint
+
+    Export:
+      Name: !Sub CloudMart-${Environment}-EventBridgeVpcEndpointId
