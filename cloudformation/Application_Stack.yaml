@@ -51,10 +51,10 @@ Resources:
       ContentUri: ../layers/pymysql/
 
       CompatibleRuntimes:
-        - python3.13
+        - python3.12
 
     Metadata:
-      BuildMethod: python3.13
+      BuildMethod: python3.12
 
 
   # ==========================================================
@@ -72,7 +72,7 @@ Resources:
 
       Handler: authorizer_lambda.lambda_handler
 
-      Runtime: python3.13
+      Runtime: python3.12
 
       Timeout: 10
 
@@ -104,7 +104,7 @@ Resources:
 
       Handler: product_lambda.lambda_handler
 
-      Runtime: python3.13
+      Runtime: python3.12
 
       Timeout: 30
 
