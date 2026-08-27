@@ -224,7 +224,7 @@ jobs:
           sam deploy \
             --template-file .aws-sam/build/template.yaml \
             --stack-name cloudmart-application-dev \
-            --resolve-s3 \
+            --s3-bucket cloudmart-dev-sam-artifacts-598886663370 \
             --on-failure DO_NOTHING \
             --capabilities CAPABILITY_IAM \
             --parameter-overrides \
