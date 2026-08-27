@@ -74,15 +74,18 @@ def get_db_connection():
 
 
 # ============================================================
-# DECIMAL CONVERSION
+# JSON SERIALIZATION
 # ============================================================
 
-def decimal_to_float(value):
+def json_serializer(value):
 
     if isinstance(value, Decimal):
         return float(value)
 
-    return value
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+
+    return str(value)
 
 
 # ============================================================
@@ -102,7 +105,7 @@ def response(status_code, body=None):
 
         result["body"] = json.dumps(
             body,
-            default=decimal_to_float
+            default=json_serializer
         )
 
     return result
