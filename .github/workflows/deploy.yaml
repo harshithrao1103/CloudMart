@@ -222,11 +222,13 @@ jobs:
       - name: Deploy SAM Application
         run: |
           sam deploy \
-            --template-file .aws-sam/build/template.yaml \
-            --stack-name cloudmart-application-dev \
-            --capabilities CAPABILITY_IAM \
-            --parameter-overrides \
-              Environment=dev \
-              NotificationEmail="${{ secrets.NOTIFICATION_EMAIL }}" \
-            --no-confirm-changeset \
-            --no-fail-on-empty-changeset
+            sam deploy \
+              --template-file .aws-sam/build/template.yaml \
+              --stack-name cloudmart-application-dev \
+              --resolve-s3 \
+              --capabilities CAPABILITY_IAM \
+              --parameter-overrides \
+                Environment=dev \
+                NotificationEmail="${{ secrets.NOTIFICATION_EMAIL }}" \
+              --no-confirm-changeset \
+              --no-fail-on-empty-changeset
