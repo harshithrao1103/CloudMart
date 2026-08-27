@@ -154,11 +154,12 @@ Resources:
         # ======================================================
 
         CreateProduct:
-          Type: Api
+          Type: HttpApi
           Properties:
-            RestApiId: !Ref CloudMartApi
+            ApiId: !Ref CloudMartApi
             Path: /products
             Method: post
+            PayloadFormatVersion: "2.0"
 
 
         # ======================================================
@@ -166,11 +167,12 @@ Resources:
         # ======================================================
 
         GetProducts:
-          Type: Api
+          Type: HttpApi
           Properties:
-            RestApiId: !Ref CloudMartApi
+            ApiId: !Ref CloudMartApi
             Path: /products
             Method: get
+            PayloadFormatVersion: "2.0"
 
 
         # ======================================================
@@ -178,11 +180,12 @@ Resources:
         # ======================================================
 
         GetProduct:
-          Type: Api
+          Type: HttpApi
           Properties:
-            RestApiId: !Ref CloudMartApi
+            ApiId: !Ref CloudMartApi
             Path: /products/{productId}
             Method: get
+            PayloadFormatVersion: "2.0"
 
 
         # ======================================================
@@ -190,11 +193,12 @@ Resources:
         # ======================================================
 
         UpdateProduct:
-          Type: Api
+          Type: HttpApi
           Properties:
-            RestApiId: !Ref CloudMartApi
+            ApiId: !Ref CloudMartApi
             Path: /products/{productId}
             Method: put
+            PayloadFormatVersion: "2.0"
 
 
         # ======================================================
@@ -202,28 +206,26 @@ Resources:
         # ======================================================
 
         DeleteProduct:
-          Type: Api
+          Type: HttpApi
           Properties:
-            RestApiId: !Ref CloudMartApi
+            ApiId: !Ref CloudMartApi
             Path: /products/{productId}
             Method: delete
+            PayloadFormatVersion: "2.0"
 
 
   # ==========================================================
-  # API GATEWAY
+  # API GATEWAY HTTP API
   # ==========================================================
 
   CloudMartApi:
-    Type: AWS::Serverless::Api
+    Type: AWS::Serverless::HttpApi
 
     Properties:
 
       Name: !Sub cloudmart-${Environment}-api
 
       StageName: !Ref Environment
-
-      EndpointConfiguration:
-        Type: REGIONAL
 
       Auth:
 
@@ -236,6 +238,8 @@ Resources:
             FunctionArn: !GetAtt AuthorizerLambda.Arn
 
             FunctionPayloadType: REQUEST
+
+            AuthorizerPayloadFormatVersion: "2.0"
 
             EnableSimpleResponses: true
 
