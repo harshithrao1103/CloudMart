@@ -252,6 +252,26 @@ Resources:
 
 
   # ==========================================================
+  # API GATEWAY -> AUTHORIZER LAMBDA PERMISSION
+  # ==========================================================
+
+  AuthorizerLambdaPermission:
+    Type: AWS::Lambda::Permission
+
+    Properties:
+
+      Action: lambda:InvokeFunction
+
+      FunctionName: !GetAtt AuthorizerLambda.Arn
+
+      Principal: apigateway.amazonaws.com
+
+      SourceArn: !Sub
+        - arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiId}/authorizers/*
+        - ApiId: !Ref CloudMartApi
+
+
+  # ==========================================================
   # SNS LOW-STOCK TOPIC
   # ==========================================================
 
@@ -319,7 +339,7 @@ Resources:
 
 
   # ==========================================================
-  # EVENTBRIDGE → SNS PERMISSION
+  # EVENTBRIDGE -> SNS PERMISSION
   # ==========================================================
 
   LowStockTopicPolicy:
@@ -391,7 +411,7 @@ Outputs:
 
 
   LowStockTopicArn:
-    Description: SNS Low Stock Topic ARN
+    Description: CloudMart Low Stock Topic ARN
 
     Value: !Ref LowStockTopic
 
