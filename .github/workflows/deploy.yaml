@@ -95,8 +95,6 @@ jobs:
 
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          ref: main
 
       - name: Verify Data Stack File
         run: |
@@ -164,7 +162,7 @@ jobs:
 
 
   # ==================================================
-  # APPLICATION STACK - MILESTONE 3
+  # APPLICATION STACK - MILESTONE 4
   # ==================================================
 
   deploy-application:

@@ -216,6 +216,12 @@ Resources:
                   - ec2:UnassignPrivateIpAddresses
                 Resource: '*'
 
+              # SQS order failure queue
+              - Effect: Allow
+                Action:
+                  - sqs:SendMessage
+                Resource: !Sub arn:${AWS::Partition}:sqs:${AWS::Region}:${AWS::AccountId}:cloudmart-${Environment}-order-failures
+
 
   # ==================================================
   # Statistics Lambda Role
@@ -277,6 +283,7 @@ Resources:
           CidrIp: 0.0.0.0/0
 
       Tags:
+
         - Key: Name
           Value: !Sub cloudmart-${Environment}-ec2-sg
 
@@ -298,6 +305,7 @@ Resources:
           !Sub CloudMart-${Environment}-VpcId
 
       Tags:
+
         - Key: Name
           Value: !Sub cloudmart-${Environment}-lambda-sg
 
@@ -326,6 +334,7 @@ Resources:
           SourceSecurityGroupId: !Ref LambdaSecurityGroup
 
       Tags:
+
         - Key: Name
           Value: !Sub cloudmart-${Environment}-rds-sg
 
@@ -392,4 +401,4 @@ Outputs:
     Description: CloudMart RDS Security Group ID
     Value: !Ref RDSSecurityGroup
     Export:
-      Name: !Sub CloudMart-${Environment}-RDSSecurityGroupId
+      Name: !Sub CloudMart-${Environment}-RDSSecurityGroupIdgit diff --check
