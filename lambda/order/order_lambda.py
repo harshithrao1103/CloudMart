@@ -11,6 +11,7 @@ from decimal import Decimal
 
 ssm = boto3.client("ssm")
 sqs = boto3.client("sqs")
+events = boto3.client("events")
 
 
 # ============================================================
@@ -29,6 +30,11 @@ ORDER_FAILURE_QUEUE_URL = os.environ.get(
 ORDER_FAILURE_QUEUE_NAME = os.environ.get(
     "ORDER_FAILURE_QUEUE_NAME",
     "cloudmart-dev-order-failures"
+)
+
+EVENT_BUS_NAME = os.environ.get(
+    "EVENT_BUS_NAME",
+    "default"
 )
 
 
@@ -185,6 +191,44 @@ def send_failure_to_sqs(
         print(
             f"Failed to send order {order_id} "
             f"to SQS: {str(sqs_error)}"
+        )
+
+        return False
+
+
+# ============================================================
+# PUBLISH ORDER EVENT TO EVENTBRIDGE
+# ============================================================
+
+def publish_order_event(detail_type, detail):
+
+    try:
+
+        events.put_events(
+            Entries=[
+                {
+                    "EventBusName": EVENT_BUS_NAME,
+                    "Source": "cloudmart.orders",
+                    "DetailType": detail_type,
+                    "Detail": json.dumps(
+                        detail,
+                        default=decimal_to_float
+                    )
+                }
+            ]
+        )
+
+        print(
+            f"Published EventBridge event: {detail_type}"
+        )
+
+        return True
+
+    except Exception as event_error:
+
+        print(
+            f"Failed to publish EventBridge event "
+            f"{detail_type}: {str(event_error)}"
         )
 
         return False
@@ -465,6 +509,17 @@ def create_order(event):
             )
 
         connection.commit()
+
+        publish_order_event(
+            "OrderCreated",
+            {
+                "order_id": order_id,
+                "customer_id": customer_id,
+                "status": "CREATED",
+                "total_amount": total_amount,
+                "items": order_items
+            }
+        )
 
         return response(
             201,
@@ -912,6 +967,25 @@ def update_order(event, order_id):
 
         connection.commit()
 
+        status_event_map = {
+            "CONFIRMED": "OrderConfirmed",
+            "PROCESSING": "OrderProcessing",
+            "SHIPPED": "OrderShipped",
+            "DELIVERED": "OrderDelivered"
+        }
+
+        event_type = status_event_map.get(new_status)
+
+        if event_type:
+            publish_order_event(
+                event_type,
+                {
+                    "order_id": order_id,
+                    "old_status": old_status,
+                    "new_status": new_status
+                }
+            )
+
         return response(
             200,
             {
@@ -950,6 +1024,286 @@ def update_order(event, order_id):
             {
                 "message": "Order processing failed",
                 "order_id": order_id
+            }
+        )
+
+    finally:
+
+        connection.close()
+
+
+# ============================================================
+# PATCH ORDER ITEMS
+# ============================================================
+
+def update_order_items(event, order_id):
+
+    try:
+
+        body = json.loads(
+            event.get("body") or "{}"
+        )
+
+    except json.JSONDecodeError:
+
+        return response(
+            400,
+            {
+                "message": "Invalid JSON request body"
+            }
+        )
+
+    items = body.get("items")
+
+    if not isinstance(items, list) or not items:
+
+        return response(
+            400,
+            {
+                "message": "items must be a non-empty array"
+            }
+        )
+
+    connection = get_db_connection()
+
+    try:
+
+        with connection.cursor() as cursor:
+
+            cursor.execute(
+                """
+                SELECT
+                    order_id,
+                    customer_id,
+                    status
+                FROM orders
+                WHERE order_id = %s
+                FOR UPDATE
+                """,
+                (order_id,)
+            )
+
+            order = cursor.fetchone()
+
+            if not order:
+
+                return response(
+                    404,
+                    {
+                        "message": "Order not found"
+                    }
+                )
+
+            if order["status"] != "CREATED":
+
+                return response(
+                    409,
+                    {
+                        "message":
+                        "Order items can only be changed "
+                        "while order status is CREATED"
+                    }
+                )
+
+            new_items = []
+            total_amount = Decimal("0.00")
+
+            for item in items:
+
+                product_id = item.get("product_id")
+                quantity = item.get("quantity")
+
+                try:
+
+                    product_id = int(product_id)
+                    quantity = int(quantity)
+
+                    if product_id <= 0 or quantity <= 0:
+                        raise ValueError
+
+                except (ValueError, TypeError):
+
+                    connection.rollback()
+
+                    return response(
+                        422,
+                        {
+                            "message":
+                            "Invalid product_id or quantity"
+                        }
+                    )
+
+                cursor.execute(
+                    """
+                    SELECT
+                        i.product_id,
+                        i.quantity,
+                        p.price,
+                        p.is_active
+                    FROM inventory i
+                    INNER JOIN products p
+                        ON i.product_id = p.product_id
+                    WHERE i.product_id = %s
+                    FOR UPDATE
+                    """,
+                    (product_id,)
+                )
+
+                product = cursor.fetchone()
+
+                if not product:
+
+                    connection.rollback()
+
+                    return response(
+                        404,
+                        {
+                            "message":
+                            f"Product {product_id} not found"
+                        }
+                    )
+
+                if not product["is_active"]:
+
+                    connection.rollback()
+
+                    return response(
+                        409,
+                        {
+                            "message":
+                            f"Product {product_id} is inactive"
+                        }
+                    )
+
+                if product["quantity"] < quantity:
+
+                    connection.rollback()
+
+                    return response(
+                        409,
+                        {
+                            "message":
+                            f"Insufficient inventory for product "
+                            f"{product_id}"
+                        }
+                    )
+
+                unit_price = product["price"]
+                total_amount += unit_price * quantity
+
+                new_items.append(
+                    {
+                        "product_id": product_id,
+                        "quantity": quantity,
+                        "unit_price": unit_price
+                    }
+                )
+
+            cursor.execute(
+                """
+                SELECT
+                    oi.product_id,
+                    p.name AS product_name,
+                    oi.quantity,
+                    oi.unit_price
+                FROM order_items oi
+                INNER JOIN products p
+                    ON oi.product_id = p.product_id
+                WHERE oi.order_id = %s
+                ORDER BY oi.order_item_id
+                """,
+                (order_id,)
+            )
+
+            old_items = cursor.fetchall()
+
+            cursor.execute(
+                """
+                DELETE FROM order_items
+                WHERE order_id = %s
+                """,
+                (order_id,)
+            )
+
+            for item in new_items:
+
+                cursor.execute(
+                    """
+                    INSERT INTO order_items
+                    (
+                        order_id,
+                        product_id,
+                        quantity,
+                        unit_price
+                    )
+                    VALUES
+                    (
+                        %s,
+                        %s,
+                        %s,
+                        %s
+                    )
+                    """,
+                    (
+                        order_id,
+                        item["product_id"],
+                        item["quantity"],
+                        item["unit_price"]
+                    )
+                )
+
+            cursor.execute(
+                """
+                UPDATE orders
+                SET
+                    total_amount = %s,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE order_id = %s
+                """,
+                (
+                    total_amount,
+                    order_id
+                )
+            )
+
+        connection.commit()
+
+        publish_order_event(
+            "OrderItemChanged",
+            {
+                "order_id": order_id,
+                "customer_id": order["customer_id"],
+                "status": order["status"],
+                "old_items": old_items,
+                "new_items": new_items,
+                "total_amount": total_amount
+            }
+        )
+
+        return response(
+            200,
+            {
+                "order_id": order_id,
+                "customer_id": order["customer_id"],
+                "status": order["status"],
+                "total_amount": total_amount,
+                "items": new_items
+            }
+        )
+
+    except Exception as error:
+
+        connection.rollback()
+
+        print(
+            "Update order items error:",
+            str(error)
+        )
+
+        return response(
+            500,
+            {
+                "message": "Internal server error"
             }
         )
 
@@ -1120,6 +1474,16 @@ def cancel_order(event, order_id):
 
         connection.commit()
 
+        publish_order_event(
+            "OrderCancelled",
+            {
+                "order_id": order_id,
+                "old_status": old_status,
+                "new_status": "CANCELLED",
+                "reason": reason
+            }
+        )
+
         return response(
             200,
             {
@@ -1251,6 +1615,21 @@ def lambda_handler(event, context):
     ):
 
         return update_order(
+            event,
+            order_id
+        )
+
+    # ========================================================
+    # PATCH /orders/{orderId}
+    # ========================================================
+
+    if (
+        method == "PATCH"
+        and order_id is not None
+        and not path.endswith("/cancel")
+    ):
+
+        return update_order_items(
             event,
             order_id
         )

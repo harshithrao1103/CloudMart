@@ -637,6 +637,156 @@ Resources:
                 aws:SourceArn:
                   - !GetAtt LowStockRule.Arn
 
+# ============================================================
+# EVENTBRIDGE ORDER RULES
+# ============================================================
+
+  OrderCreatedRule:
+    Type: AWS::Events::Rule
+
+    Properties:
+
+      Name: !Sub cloudmart-${Environment}-order-created
+
+      Description: >
+        Captures CloudMart order creation events
+
+      State: ENABLED
+
+      EventPattern:
+
+        source:
+          - cloudmart.orders
+
+        detail-type:
+          - OrderCreated
+
+
+  OrderConfirmedRule:
+    Type: AWS::Events::Rule
+
+    Properties:
+
+      Name: !Sub cloudmart-${Environment}-order-confirmed
+
+      Description: >
+        Captures CloudMart order confirmation events
+
+      State: ENABLED
+
+      EventPattern:
+
+        source:
+          - cloudmart.orders
+
+        detail-type:
+          - OrderConfirmed
+
+
+  OrderProcessingRule:
+    Type: AWS::Events::Rule
+
+    Properties:
+
+      Name: !Sub cloudmart-${Environment}-order-processing
+
+      Description: >
+        Captures CloudMart order processing events
+
+      State: ENABLED
+
+      EventPattern:
+
+        source:
+          - cloudmart.orders
+
+        detail-type:
+          - OrderProcessing
+
+
+  OrderShippedRule:
+    Type: AWS::Events::Rule
+
+    Properties:
+
+      Name: !Sub cloudmart-${Environment}-order-shipped
+
+      Description: >
+        Captures CloudMart order shipment events
+
+      State: ENABLED
+
+      EventPattern:
+
+        source:
+          - cloudmart.orders
+
+        detail-type:
+          - OrderShipped
+
+
+  OrderDeliveredRule:
+    Type: AWS::Events::Rule
+
+    Properties:
+
+      Name: !Sub cloudmart-${Environment}-order-delivered
+
+      Description: >
+        Captures CloudMart order delivery events
+
+      State: ENABLED
+
+      EventPattern:
+
+        source:
+          - cloudmart.orders
+
+        detail-type:
+          - OrderDelivered
+
+
+  OrderCancelledRule:
+    Type: AWS::Events::Rule
+
+    Properties:
+
+      Name: !Sub cloudmart-${Environment}-order-cancelled
+
+      Description: >
+        Captures CloudMart order cancellation events
+
+      State: ENABLED
+
+      EventPattern:
+
+        source:
+          - cloudmart.orders
+
+        detail-type:
+          - OrderCancelled
+
+
+  OrderItemChangedRule:
+    Type: AWS::Events::Rule
+
+    Properties:
+
+      Name: !Sub cloudmart-${Environment}-order-item-changed
+
+      Description: >
+        Captures CloudMart order item change events
+
+      State: ENABLED
+
+      EventPattern:
+
+        source:
+          - cloudmart.orders
+
+        detail-type:
+          - OrderItemChanged
+
 
 # ============================================================
 # OUTPUTS
