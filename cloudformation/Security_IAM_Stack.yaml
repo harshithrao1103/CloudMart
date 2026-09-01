@@ -401,4 +401,4 @@ Outputs:
     Description: CloudMart RDS Security Group ID
     Value: !Ref RDSSecurityGroup
     Export:
-      Name: !Sub CloudMart-${Environment}-RDSSecurityGroupIdgit diff --check
+      Name: !Sub CloudMart-${Environment}-RDSSecurityGroupId
