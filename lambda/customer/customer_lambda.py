@@ -1,482 +1,482 @@
-# import json
-# import os
-# import boto3
-# import pymysql
+import json
+import os
+import boto3
+import pymysql
 
-# ssm = boto3.client("ssm")
+ssm = boto3.client("ssm")
 
-# RDS_HOST = os.environ["RDS_HOST"]
-# DB_NAME = os.environ["DB_NAME"]
-# DB_USER = os.environ["DB_USER"]
-# DB_PASSWORD_PARAMETER = os.environ["DB_PASSWORD_PARAMETER"]
+RDS_HOST = os.environ["RDS_HOST"]
+DB_NAME = os.environ["DB_NAME"]
+DB_USER = os.environ["DB_USER"]
+DB_PASSWORD_PARAMETER = os.environ["DB_PASSWORD_PARAMETER"]
 
 
-# def get_db_connection():
+def get_db_connection():
 
-#     response = ssm.get_parameter(
-#         Name=DB_PASSWORD_PARAMETER,
-#         WithDecryption=True
-#     )
+    response = ssm.get_parameter(
+        Name=DB_PASSWORD_PARAMETER,
+        WithDecryption=True
+    )
 
-#     db_password = response["Parameter"]["Value"]
+    db_password = response["Parameter"]["Value"]
 
-#     return pymysql.connect(
-#         host=RDS_HOST,
-#         user=DB_USER,
-#         password=db_password,
-#         database=DB_NAME,
-#         port=3306,
-#         connect_timeout=10,
-#         cursorclass=pymysql.cursors.DictCursor
-#     )
+    return pymysql.connect(
+        host=RDS_HOST,
+        user=DB_USER,
+        password=db_password,
+        database=DB_NAME,
+        port=3306,
+        connect_timeout=10,
+        cursorclass=pymysql.cursors.DictCursor
+    )
 
 
-# def response(status_code, body=None):
+def response(status_code, body=None):
 
-#     result = {
-#         "statusCode": status_code,
-#         "headers": {
-#             "Content-Type": "application/json"
-#         }
-#     }
+    result = {
+        "statusCode": status_code,
+        "headers": {
+            "Content-Type": "application/json"
+        }
+    }
 
-#     if body is not None:
-#         result["body"] = json.dumps(body)
+    if body is not None:
+        result["body"] = json.dumps(body)
 
-#     return result
+    return result
 
 
-# def get_customer_id(event):
+def get_customer_id(event):
 
-#     path_parameters = event.get("pathParameters") or {}
+    path_parameters = event.get("pathParameters") or {}
 
-#     customer_id = path_parameters.get("customerId")
+    customer_id = path_parameters.get("customerId")
 
-#     if customer_id is None:
-#         return None
+    if customer_id is None:
+        return None
 
-#     try:
+    try:
 
-#         customer_id = int(customer_id)
+        customer_id = int(customer_id)
 
-#         if customer_id <= 0:
-#             return None
+        if customer_id <= 0:
+            return None
 
-#         return customer_id
+        return customer_id
 
-#     except (ValueError, TypeError):
+    except (ValueError, TypeError):
 
-#         return None
+        return None
 
 
-# def create_customer(event):
+def create_customer(event):
 
-#     try:
+    try:
 
-#         body = json.loads(event.get("body") or "{}")
+        body = json.loads(event.get("body") or "{}")
 
-#     except json.JSONDecodeError:
+    except json.JSONDecodeError:
 
-#         return response(
-#             400,
-#             {"message": "Invalid JSON request body"}
-#         )
+        return response(
+            400,
+            {"message": "Invalid JSON request body"}
+        )
 
-#     name = body.get("name")
-#     email = body.get("email")
+    name = body.get("name")
+    email = body.get("email")
 
-#     if not name or not email:
+    if not name or not email:
 
-#         return response(
-#             400,
-#             {
-#                 "message": "name and email are required"
-#             }
-#         )
+        return response(
+            400,
+            {
+                "message": "name and email are required"
+            }
+        )
 
-#     connection = get_db_connection()
+    connection = get_db_connection()
 
-#     try:
+    try:
 
-#         with connection.cursor() as cursor:
-
-#             # Check whether email already exists
-#             cursor.execute(
-#                 """
-#                 SELECT customer_id
-#                 FROM customers
-#                 WHERE email = %s
-#                 """,
-#                 (email,)
-#             )
-
-#             if cursor.fetchone():
-
-#                 return response(
-#                     409,
-#                     {
-#                         "message":
-#                         "Customer with email already exists"
-#                     }
-#                 )
-
-#             # Create customer
-#             cursor.execute(
-#                 """
-#                 INSERT INTO customers
-#                     (name, email)
-#                 VALUES
-#                     (%s, %s)
-#                 """,
-#                 (name, email)
-#             )
+        with connection.cursor() as cursor:
+
+            # Check whether email already exists
+            cursor.execute(
+                """
+                SELECT customer_id
+                FROM customers
+                WHERE email = %s
+                """,
+                (email,)
+            )
+
+            if cursor.fetchone():
+
+                return response(
+                    409,
+                    {
+                        "message":
+                        "Customer with email already exists"
+                    }
+                )
+
+            # Create customer
+            cursor.execute(
+                """
+                INSERT INTO customers
+                    (name, email)
+                VALUES
+                    (%s, %s)
+                """,
+                (name, email)
+            )
 
-#             customer_id = cursor.lastrowid
+            customer_id = cursor.lastrowid
 
-#         connection.commit()
+        connection.commit()
 
-#         return response(
-#             201,
-#             {
-#                 "customer_id": customer_id,
-#                 "name": name,
-#                 "email": email
-#             }
-#         )
+        return response(
+            201,
+            {
+                "customer_id": customer_id,
+                "name": name,
+                "email": email
+            }
+        )
 
-#     except pymysql.err.IntegrityError as error:
+    except pymysql.err.IntegrityError as error:
 
-#         connection.rollback()
+        connection.rollback()
 
-#         print("Create customer integrity error:", str(error))
+        print("Create customer integrity error:", str(error))
 
-#         return response(
-#             409,
-#             {
-#                 "message":
-#                 "Customer with email already exists"
-#             }
-#         )
+        return response(
+            409,
+            {
+                "message":
+                "Customer with email already exists"
+            }
+        )
 
-#     except Exception as error:
+    except Exception as error:
 
-#         connection.rollback()
+        connection.rollback()
 
-#         print("Create customer error:", str(error))
+        print("Create customer error:", str(error))
 
-#         return response(
-#             500,
-#             {
-#                 "message": "Internal server error"
-#             }
-#         )
+        return response(
+            500,
+            {
+                "message": "Internal server error"
+            }
+        )
 
-#     finally:
+    finally:
 
-#         connection.close()
+        connection.close()
 
 
-# def get_customer(customer_id):
+def get_customer(customer_id):
 
-#     connection = get_db_connection()
+    connection = get_db_connection()
 
-#     try:
+    try:
 
-#         with connection.cursor() as cursor:
+        with connection.cursor() as cursor:
 
-#             cursor.execute(
-#                 """
-#                 SELECT
-#                     customer_id,
-#                     name,
-#                     email,
-#                     created_at
-#                 FROM customers
-#                 WHERE customer_id = %s
-#                 """,
-#                 (customer_id,)
-#             )
+            cursor.execute(
+                """
+                SELECT
+                    customer_id,
+                    name,
+                    email,
+                    created_at
+                FROM customers
+                WHERE customer_id = %s
+                """,
+                (customer_id,)
+            )
 
-#             customer = cursor.fetchone()
+            customer = cursor.fetchone()
 
-#         if not customer:
-
-#             return response(
-#                 404,
-#                 {
-#                     "message": "Customer not found"
-#                 }
-#             )
-
-#         return response(
-#             200,
-#             customer
-#         )
-
-#     except Exception as error:
-
-#         print("Get customer error:", str(error))
-
-#         return response(
-#             500,
-#             {
-#                 "message": "Internal server error"
-#             }
-#         )
-
-#     finally:
-
-#         connection.close()
-
-
-# def update_customer(event, customer_id):
-
-#     try:
-
-#         body = json.loads(event.get("body") or "{}")
-
-#     except json.JSONDecodeError:
-
-#         return response(
-#             400,
-#             {
-#                 "message": "Invalid JSON request body"
-#             }
-#         )
-
-#     name = body.get("name")
-#     email = body.get("email")
-
-#     if not name or not email:
-
-#         return response(
-#             400,
-#             {
-#                 "message": "name and email are required"
-#             }
-#         )
-
-#     connection = get_db_connection()
+        if not customer:
+
+            return response(
+                404,
+                {
+                    "message": "Customer not found"
+                }
+            )
+
+        return response(
+            200,
+            customer
+        )
+
+    except Exception as error:
+
+        print("Get customer error:", str(error))
+
+        return response(
+            500,
+            {
+                "message": "Internal server error"
+            }
+        )
+
+    finally:
+
+        connection.close()
+
+
+def update_customer(event, customer_id):
+
+    try:
+
+        body = json.loads(event.get("body") or "{}")
+
+    except json.JSONDecodeError:
+
+        return response(
+            400,
+            {
+                "message": "Invalid JSON request body"
+            }
+        )
+
+    name = body.get("name")
+    email = body.get("email")
+
+    if not name or not email:
+
+        return response(
+            400,
+            {
+                "message": "name and email are required"
+            }
+        )
+
+    connection = get_db_connection()
 
-#     try:
+    try:
 
-#         with connection.cursor() as cursor:
+        with connection.cursor() as cursor:
 
-#             # Check customer exists
-#             cursor.execute(
-#                 """
-#                 SELECT customer_id
-#                 FROM customers
-#                 WHERE customer_id = %s
-#                 """,
-#                 (customer_id,)
-#             )
+            # Check customer exists
+            cursor.execute(
+                """
+                SELECT customer_id
+                FROM customers
+                WHERE customer_id = %s
+                """,
+                (customer_id,)
+            )
 
-#             if not cursor.fetchone():
+            if not cursor.fetchone():
 
-#                 return response(
-#                     404,
-#                     {
-#                         "message": "Customer not found"
-#                     }
-#                 )
+                return response(
+                    404,
+                    {
+                        "message": "Customer not found"
+                    }
+                )
 
-#             # Check email is not used by another customer
-#             cursor.execute(
-#                 """
-#                 SELECT customer_id
-#                 FROM customers
-#                 WHERE email = %s
-#                   AND customer_id <> %s
-#                 """,
-#                 (email, customer_id)
-#             )
-
-#             if cursor.fetchone():
-
-#                 return response(
-#                     409,
-#                     {
-#                         "message":
-#                         "Email already belongs to another customer"
-#                     }
-#                 )
-
-#             # Update customer
-#             cursor.execute(
-#                 """
-#                 UPDATE customers
-#                 SET
-#                     name = %s,
-#                     email = %s
-#                 WHERE customer_id = %s
-#                 """,
-#                 (name, email, customer_id)
-#             )
-
-#         connection.commit()
-
-#         return response(
-#             200,
-#             {
-#                 "customer_id": customer_id,
-#                 "name": name,
-#                 "email": email
-#             }
-#         )
-
-#     except pymysql.err.IntegrityError as error:
-
-#         connection.rollback()
-
-#         print("Update customer integrity error:", str(error))
-
-#         return response(
-#             409,
-#             {
-#                 "message":
-#                 "Email already belongs to another customer"
-#             }
-#         )
+            # Check email is not used by another customer
+            cursor.execute(
+                """
+                SELECT customer_id
+                FROM customers
+                WHERE email = %s
+                  AND customer_id <> %s
+                """,
+                (email, customer_id)
+            )
+
+            if cursor.fetchone():
+
+                return response(
+                    409,
+                    {
+                        "message":
+                        "Email already belongs to another customer"
+                    }
+                )
+
+            # Update customer
+            cursor.execute(
+                """
+                UPDATE customers
+                SET
+                    name = %s,
+                    email = %s
+                WHERE customer_id = %s
+                """,
+                (name, email, customer_id)
+            )
+
+        connection.commit()
+
+        return response(
+            200,
+            {
+                "customer_id": customer_id,
+                "name": name,
+                "email": email
+            }
+        )
+
+    except pymysql.err.IntegrityError as error:
+
+        connection.rollback()
+
+        print("Update customer integrity error:", str(error))
+
+        return response(
+            409,
+            {
+                "message":
+                "Email already belongs to another customer"
+            }
+        )
 
-#     except Exception as error:
+    except Exception as error:
 
-#         connection.rollback()
+        connection.rollback()
 
-#         print("Update customer error:", str(error))
+        print("Update customer error:", str(error))
 
-#         return response(
-#             500,
-#             {
-#                 "message": "Internal server error"
-#             }
-#         )
+        return response(
+            500,
+            {
+                "message": "Internal server error"
+            }
+        )
 
-#     finally:
+    finally:
 
-#         connection.close()
+        connection.close()
 
 
-# def delete_customer(customer_id):
+def delete_customer(customer_id):
 
-#     connection = get_db_connection()
+    connection = get_db_connection()
 
-#     try:
+    try:
 
-#         with connection.cursor() as cursor:
+        with connection.cursor() as cursor:
 
-#             # Check customer exists
-#             cursor.execute(
-#                 """
-#                 SELECT customer_id
-#                 FROM customers
-#                 WHERE customer_id = %s
-#                 """,
-#                 (customer_id,)
-#             )
+            # Check customer exists
+            cursor.execute(
+                """
+                SELECT customer_id
+                FROM customers
+                WHERE customer_id = %s
+                """,
+                (customer_id,)
+            )
 
-#             if not cursor.fetchone():
+            if not cursor.fetchone():
 
-#                 return response(
-#                     404,
-#                     {
-#                         "message": "Customer not found"
-#                     }
-#                 )
+                return response(
+                    404,
+                    {
+                        "message": "Customer not found"
+                    }
+                )
 
-#             # Check whether customer has orders
-#             cursor.execute(
-#                 """
-#                 SELECT order_id
-#                 FROM orders
-#                 WHERE customer_id = %s
-#                 LIMIT 1
-#                 """,
-#                 (customer_id,)
-#             )
+            # Check whether customer has orders
+            cursor.execute(
+                """
+                SELECT order_id
+                FROM orders
+                WHERE customer_id = %s
+                LIMIT 1
+                """,
+                (customer_id,)
+            )
 
-#             if cursor.fetchone():
+            if cursor.fetchone():
 
-#                 return response(
-#                     409,
-#                     {
-#                         "message":
-#                         "Customer cannot be deleted because "
-#                         "orders exist"
-#                     }
-#                 )
+                return response(
+                    409,
+                    {
+                        "message":
+                        "Customer cannot be deleted because "
+                        "orders exist"
+                    }
+                )
 
-#             # Delete customer
-#             cursor.execute(
-#                 """
-#                 DELETE FROM customers
-#                 WHERE customer_id = %s
-#                 """,
-#                 (customer_id,)
-#             )
+            # Delete customer
+            cursor.execute(
+                """
+                DELETE FROM customers
+                WHERE customer_id = %s
+                """,
+                (customer_id,)
+            )
 
-#         connection.commit()
+        connection.commit()
 
-#         return response(204)
+        return response(204)
 
-#     except Exception as error:
+    except Exception as error:
 
-#         connection.rollback()
+        connection.rollback()
 
-#         print("Delete customer error:", str(error))
+        print("Delete customer error:", str(error))
 
-#         return response(
-#             500,
-#             {
-#                 "message": "Internal server error"
-#             }
-#         )
+        return response(
+            500,
+            {
+                "message": "Internal server error"
+            }
+        )
 
-#     finally:
+    finally:
 
-#         connection.close()
+        connection.close()
 
 
-# def lambda_handler(event, context):
+def lambda_handler(event, context):
 
-#     print("Customer Lambda started")
+    print("Customer Lambda started")
 
-#     method = (
-#         event.get("httpMethod")
-#         or
-#         event.get("requestContext", {})
-#         .get("http", {})
-#         .get("method")
-#     )
+    method = (
+        event.get("httpMethod")
+        or
+        event.get("requestContext", {})
+        .get("http", {})
+        .get("method")
+    )
 
-#     customer_id = get_customer_id(event)
+    customer_id = get_customer_id(event)
 
-#     print("HTTP method:", method)
-#     print("Customer ID:", customer_id)
+    print("HTTP method:", method)
+    print("Customer ID:", customer_id)
 
-#     # POST /customers
-#     if method == "POST" and customer_id is None:
+    # POST /customers
+    if method == "POST" and customer_id is None:
 
-#         return create_customer(event)
+        return create_customer(event)
 
-#     # GET /customers/{customerId}
-#     if method == "GET" and customer_id is not None:
+    # GET /customers/{customerId}
+    if method == "GET" and customer_id is not None:
 
-#         return get_customer(customer_id)
+        return get_customer(customer_id)
 
-#     # PUT /customers/{customerId}
-#     if method == "PUT" and customer_id is not None:
+    # PUT /customers/{customerId}
+    if method == "PUT" and customer_id is not None:
 
-#         return update_customer(event, customer_id)
+        return update_customer(event, customer_id)
 
-#     # DELETE /customers/{customerId}
-#     if method == "DELETE" and customer_id is not None:
+    # DELETE /customers/{customerId}
+    if method == "DELETE" and customer_id is not None:
 
-#         return delete_customer(customer_id)
+        return delete_customer(customer_id)
 
-#     return response(
-#         400,
-#         {
-#             "message": "Unsupported API request"
-#         }
-#     )
+    return response(
+        400,
+        {
+            "message": "Unsupported API request"
+        }
+    )

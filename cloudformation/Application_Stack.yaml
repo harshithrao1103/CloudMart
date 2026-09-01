@@ -6,7 +6,7 @@ Transform:
 Description: >
   CloudMart Milestone 4 Application Stack -
   API Gateway, Lambda Authorizer, Product service,
-  Order service, SQS failure queue,
+  Customer service, Order service, SQS failure queue,
   EventBridge and SNS low-stock alerts.
 
 
@@ -211,6 +211,116 @@ Resources:
           Properties:
             ApiId: !Ref CloudMartApi
             Path: /products/{productId}
+            Method: delete
+            PayloadFormatVersion: "2.0"
+
+
+  # ==========================================================
+  # CUSTOMER LAMBDA
+  # ==========================================================
+
+  CustomerLambda:
+    Type: AWS::Serverless::Function
+
+    Properties:
+
+      FunctionName: !Sub cloudmart-${Environment}-customer
+
+      CodeUri: ../lambda/customer/
+
+      Handler: customer_lambda.lambda_handler
+
+      Runtime: python3.12
+
+      Timeout: 30
+
+      MemorySize: 256
+
+      Role:
+        Fn::ImportValue:
+          !Sub CloudMart-${Environment}-CustomerLambdaRoleArn
+
+      Layers:
+        - !Ref PyMySQLLayer
+
+      VpcConfig:
+
+        SecurityGroupIds:
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-LambdaSecurityGroupId
+
+        SubnetIds:
+
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-PrivateSubnet1Id
+
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-PrivateSubnet2Id
+
+      Environment:
+        Variables:
+
+          RDS_HOST:
+            Fn::ImportValue:
+              !Sub CloudMart-${Environment}-RDSEndpoint
+
+          DB_NAME: cloudmart
+
+          DB_USER: admin
+
+          DB_PASSWORD_PARAMETER:
+            !Sub /cloudmart/${Environment}/db/password
+
+      Events:
+
+        # ======================================================
+        # POST /customers
+        # ======================================================
+
+        CreateCustomer:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CloudMartApi
+            Path: /customers
+            Method: post
+            PayloadFormatVersion: "2.0"
+
+
+        # ======================================================
+        # GET /customers/{customerId}
+        # ======================================================
+
+        GetCustomer:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CloudMartApi
+            Path: /customers/{customerId}
+            Method: get
+            PayloadFormatVersion: "2.0"
+
+
+        # ======================================================
+        # PUT /customers/{customerId}
+        # ======================================================
+
+        UpdateCustomer:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CloudMartApi
+            Path: /customers/{customerId}
+            Method: put
+            PayloadFormatVersion: "2.0"
+
+
+        # ======================================================
+        # DELETE /customers/{customerId}
+        # ======================================================
+
+        DeleteCustomer:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CloudMartApi
+            Path: /customers/{customerId}
             Method: delete
             PayloadFormatVersion: "2.0"
 
@@ -553,6 +663,15 @@ Outputs:
       Name: !Sub CloudMart-${Environment}-ProductLambdaArn
 
 
+  CustomerLambdaArn:
+    Description: Customer Lambda ARN
+
+    Value: !GetAtt CustomerLambda.Arn
+
+    Export:
+      Name: !Sub CloudMart-${Environment}-CustomerLambdaArn
+
+
   OrderLambdaArn:
     Description: Order Lambda ARN
 
@@ -563,7 +682,7 @@ Outputs:
 
 
   AuthorizerLambdaArn:
-    Description: Lambda Authorizer ARN
+    Description: Authorizer Lambda ARN
 
     Value: !GetAtt AuthorizerLambda.Arn
 
