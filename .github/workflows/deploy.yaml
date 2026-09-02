@@ -228,5 +228,6 @@ jobs:
             --parameter-overrides \
               Environment=dev \
               NotificationEmail="${{ secrets.NOTIFICATION_EMAIL }}" \
+              SenderEmail="${{ secrets.SENDER_EMAIL }}" \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset

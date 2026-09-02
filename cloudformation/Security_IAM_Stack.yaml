@@ -362,6 +362,54 @@ Resources:
           Value: !Ref Environment
 
 
+
+  # ==========================================================
+  # Notification Lambda Role
+  # ==========================================================
+
+  NotificationLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub CloudMart-${Environment}-NotificationLambdaRole
+
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+
+      Policies:
+        - PolicyName: NotificationLambdaPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+
+              # CloudWatch Logs
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+
+              # Amazon SES
+              - Effect: Allow
+                Action:
+                  - ses:SendEmail
+                  - ses:SendRawEmail
+                Resource: '*'
+
+      Tags:
+        - Key: Project
+          Value: CloudMart
+
+        - Key: Environment
+          Value: !Ref Environment
+
 # ============================================================
 # OUTPUTS
 # ============================================================
@@ -422,3 +470,10 @@ Outputs:
     Value: !Ref RDSSecurityGroup
     Export:
       Name: !Sub CloudMart-${Environment}-RDSSecurityGroupId
+
+
+  NotificationLambdaRoleArn:
+    Description: Notification Lambda IAM Role ARN
+    Value: !GetAtt NotificationLambdaRole.Arn
+    Export:
+      Name: !Sub CloudMart-${Environment}-NotificationLambdaRoleArn

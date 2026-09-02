@@ -296,7 +296,7 @@ def create_order(event):
 
             cursor.execute(
                 """
-                SELECT customer_id
+                SELECT customer_id, email
                 FROM customers
                 WHERE customer_id = %s
                 """,
@@ -515,6 +515,7 @@ def create_order(event):
             {
                 "order_id": order_id,
                 "customer_id": customer_id,
+                "customer_email": customer["email"],
                 "status": "CREATED",
                 "total_amount": total_amount,
                 "items": order_items
@@ -780,9 +781,13 @@ def update_order(event, order_id):
             cursor.execute(
                 """
                 SELECT
-                    status
-                FROM orders
-                WHERE order_id = %s
+                    o.status,
+                    o.customer_id,
+                    c.email AS customer_email
+                FROM orders o
+                INNER JOIN customers c
+                    ON o.customer_id = c.customer_id
+                WHERE o.order_id = %s
                 FOR UPDATE
                 """,
                 (order_id,)
@@ -981,6 +986,8 @@ def update_order(event, order_id):
                 event_type,
                 {
                     "order_id": order_id,
+                    "customer_id": order["customer_id"],
+                    "customer_email": order["customer_email"],
                     "old_status": old_status,
                     "new_status": new_status
                 }
@@ -1073,11 +1080,14 @@ def update_order_items(event, order_id):
             cursor.execute(
                 """
                 SELECT
-                    order_id,
-                    customer_id,
-                    status
-                FROM orders
-                WHERE order_id = %s
+                    o.order_id,
+                    o.customer_id,
+                    o.status,
+                    c.email AS customer_email
+                FROM orders o
+                INNER JOIN customers c
+                    ON o.customer_id = c.customer_id
+                WHERE o.order_id = %s
                 FOR UPDATE
                 """,
                 (order_id,)
@@ -1273,6 +1283,7 @@ def update_order_items(event, order_id):
             {
                 "order_id": order_id,
                 "customer_id": order["customer_id"],
+                "customer_email": order["customer_email"],
                 "status": order["status"],
                 "old_items": old_items,
                 "new_items": new_items,
@@ -1351,9 +1362,13 @@ def cancel_order(event, order_id):
             cursor.execute(
                 """
                 SELECT
-                    status
-                FROM orders
-                WHERE order_id = %s
+                    o.status,
+                    o.customer_id,
+                    c.email AS customer_email
+                FROM orders o
+                INNER JOIN customers c
+                    ON o.customer_id = c.customer_id
+                WHERE o.order_id = %s
                 FOR UPDATE
                 """,
                 (order_id,)
@@ -1478,6 +1493,8 @@ def cancel_order(event, order_id):
             "OrderCancelled",
             {
                 "order_id": order_id,
+                "customer_id": order["customer_id"],
+                "customer_email": order["customer_email"],
                 "old_status": old_status,
                 "new_status": "CANCELLED",
                 "reason": reason

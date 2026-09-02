@@ -29,6 +29,10 @@ Parameters:
     Type: String
     Description: Email address for CloudMart low-stock alerts
 
+  SenderEmail:
+    Type: String
+    Description: Verified SES sender email for order notifications
+
 
 # ============================================================
 # RESOURCES
@@ -460,6 +464,36 @@ Resources:
             PayloadFormatVersion: "2.0"
 
 
+
+  # ==========================================================
+  # NOTIFICATION LAMBDA
+  # ==========================================================
+
+  NotificationLambda:
+    Type: AWS::Serverless::Function
+
+    Properties:
+
+      FunctionName: !Sub cloudmart-${Environment}-notification
+
+      CodeUri: ../lambda/notification/
+
+      Handler: notification_lambda.lambda_handler
+
+      Runtime: python3.12
+
+      Timeout: 30
+
+      MemorySize: 128
+
+      Role:
+        Fn::ImportValue:
+          !Sub CloudMart-${Environment}-NotificationLambdaRoleArn
+
+      Environment:
+        Variables:
+
+          SENDER_EMAIL: !Ref SenderEmail
   # ==========================================================
   # ORDER FAILURE SQS QUEUE
   # ==========================================================
@@ -661,6 +695,10 @@ Resources:
         detail-type:
           - OrderCreated
 
+      Targets:
+        - Arn: !GetAtt NotificationLambda.Arn
+          Id: OrderCreatedNotificationTarget
+
 
   OrderConfirmedRule:
     Type: AWS::Events::Rule
@@ -681,6 +719,10 @@ Resources:
 
         detail-type:
           - OrderConfirmed
+
+      Targets:
+        - Arn: !GetAtt NotificationLambda.Arn
+          Id: OrderConfirmedNotificationTarget
 
 
   OrderProcessingRule:
@@ -703,6 +745,10 @@ Resources:
         detail-type:
           - OrderProcessing
 
+      Targets:
+        - Arn: !GetAtt NotificationLambda.Arn
+          Id: OrderProcessingNotificationTarget
+
 
   OrderShippedRule:
     Type: AWS::Events::Rule
@@ -723,6 +769,10 @@ Resources:
 
         detail-type:
           - OrderShipped
+
+      Targets:
+        - Arn: !GetAtt NotificationLambda.Arn
+          Id: OrderShippedNotificationTarget
 
 
   OrderDeliveredRule:
@@ -745,6 +795,10 @@ Resources:
         detail-type:
           - OrderDelivered
 
+      Targets:
+        - Arn: !GetAtt NotificationLambda.Arn
+          Id: OrderDeliveredNotificationTarget
+
 
   OrderCancelledRule:
     Type: AWS::Events::Rule
@@ -766,6 +820,10 @@ Resources:
         detail-type:
           - OrderCancelled
 
+      Targets:
+        - Arn: !GetAtt NotificationLambda.Arn
+          Id: OrderCancelledNotificationTarget
+
 
   OrderItemChangedRule:
     Type: AWS::Events::Rule
@@ -786,6 +844,77 @@ Resources:
 
         detail-type:
           - OrderItemChanged
+
+      Targets:
+        - Arn: !GetAtt NotificationLambda.Arn
+          Id: OrderItemChangedNotificationTarget
+
+
+# ============================================================
+# EVENTBRIDGE ORDER RULE -> NOTIFICATION LAMBDA PERMISSIONS
+# ============================================================
+
+  OrderCreatedNotificationPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt NotificationLambda.Arn
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt OrderCreatedRule.Arn
+
+
+  OrderConfirmedNotificationPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt NotificationLambda.Arn
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt OrderConfirmedRule.Arn
+
+
+  OrderProcessingNotificationPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt NotificationLambda.Arn
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt OrderProcessingRule.Arn
+
+
+  OrderShippedNotificationPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt NotificationLambda.Arn
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt OrderShippedRule.Arn
+
+
+  OrderDeliveredNotificationPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt NotificationLambda.Arn
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt OrderDeliveredRule.Arn
+
+
+  OrderCancelledNotificationPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt NotificationLambda.Arn
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt OrderCancelledRule.Arn
+
+
+  OrderItemChangedNotificationPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt NotificationLambda.Arn
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt OrderItemChangedRule.Arn
 
 
 # ============================================================
@@ -838,6 +967,13 @@ Outputs:
 
     Export:
       Name: !Sub CloudMart-${Environment}-AuthorizerLambdaArn
+
+
+  NotificationLambdaArn:
+    Description: Notification Lambda ARN
+    Value: !GetAtt NotificationLambda.Arn
+    Export:
+      Name: !Sub CloudMart-${Environment}-NotificationLambdaArn
 
 
   LowStockTopicArn:
