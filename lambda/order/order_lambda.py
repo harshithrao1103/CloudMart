@@ -3,6 +3,7 @@ import os
 import boto3
 import pymysql
 from decimal import Decimal
+from datetime import datetime
 
 
 # ============================================================
@@ -70,6 +71,9 @@ def decimal_to_float(value):
 
     if isinstance(value, Decimal):
         return float(value)
+
+    if isinstance(value, datetime):
+        return value.isoformat()
 
     return value
 
