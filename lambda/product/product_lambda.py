@@ -17,10 +17,10 @@ events = boto3.client("events")
 # ENVIRONMENT VARIABLES
 # ============================================================
 
-RDS_HOST = os.environ["RDS_HOST"]
+RDS_HOST = os.environ["RDS_HOST"]  #RDS database endpoint.
 DB_NAME = os.environ["DB_NAME"]
 DB_USER = os.environ["DB_USER"]
-DB_PASSWORD_PARAMETER = os.environ["DB_PASSWORD_PARAMETER"]
+DB_PASSWORD_PARAMETER = os.environ["DB_PASSWORD_PARAMETER"]  #SSM parameter name containing the DB password
 
 EVENT_BUS_NAME = os.environ.get(
     "EVENT_BUS_NAME",
@@ -76,7 +76,10 @@ def get_db_connection():
 # ============================================================
 # JSON SERIALIZATION
 # ============================================================
+# It converts values returned from MySQL into a format that can be sent as JSON.
 
+# Decimal → converted to float for values like price.
+# isoformat() → converts date/time values into strings.
 def json_serializer(value):
 
     if isinstance(value, Decimal):
@@ -207,6 +210,13 @@ def publish_inventory_event(
 # ============================================================
 # CREATE PRODUCT
 # ============================================================
+# This part handles the input validation when creating a product.
+
+# Reads the JSON request body.
+# Gets , , , and .namedescriptionpriceinventory
+# Checks that required fields are present.
+# Validates that price and inventory are valid non-negative values.
+# Returns an error if the request is invalid.
 
 def create_product(event):
 
@@ -278,6 +288,7 @@ def create_product(event):
                 SELECT product_id
                 FROM products
                 WHERE name = %s
+                  AND is_active = 1
                 """,
                 (name,)
             )
@@ -437,6 +448,7 @@ def get_all_products():
                 FROM products p
                 LEFT JOIN inventory i
                     ON p.product_id = i.product_id
+                WHERE p.is_active = 1
                 ORDER BY p.product_id
                 """
             )
@@ -505,6 +517,7 @@ def get_product(product_id):
                 LEFT JOIN inventory i
                     ON p.product_id = i.product_id
                 WHERE p.product_id = %s
+                  AND p.is_active = 1
                 """,
                 (product_id,)
             )
@@ -630,6 +643,7 @@ def update_product(event, product_id):
                 SELECT product_id
                 FROM products
                 WHERE product_id = %s
+                  AND is_active = 1
                 """,
                 (product_id,)
             )
@@ -826,24 +840,15 @@ def delete_product(product_id):
                 )
 
             # ------------------------------------------------
-            # Delete inventory first
+            # Soft delete product
             # ------------------------------------------------
 
             cursor.execute(
                 """
-                DELETE FROM inventory
-                WHERE product_id = %s
-                """,
-                (product_id,)
-            )
-
-            # ------------------------------------------------
-            # Delete product
-            # ------------------------------------------------
-
-            cursor.execute(
-                """
-                DELETE FROM products
+                UPDATE products
+                SET
+                    is_active = 0,
+                    updated_at = CURRENT_TIMESTAMP
                 WHERE product_id = %s
                 """,
                 (product_id,)

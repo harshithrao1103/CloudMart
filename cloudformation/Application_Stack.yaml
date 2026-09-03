@@ -494,6 +494,7 @@ Resources:
         Variables:
 
           SENDER_EMAIL: !Ref SenderEmail
+
   # ==========================================================
   # ORDER FAILURE SQS QUEUE
   # ==========================================================
