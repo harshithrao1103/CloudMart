@@ -51,25 +51,27 @@ Resources:
             Version: '2012-10-17'
             Statement:
 
-              # CloudWatch Logs
+              # CloudWatch Logs - Create Log Group
               - Effect: Allow
                 Action:
                   - logs:CreateLogGroup
+                Resource: '*'
+
+              # CloudWatch Logs - Create Stream and Write Logs
+              - Effect: Allow
+                Action:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
-                Resource: '*'
+                Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cloudmart-${Environment}-authorizer:*
 
               # Read authentication token from SSM
               - Effect: Allow
                 Action:
                   - ssm:GetParameter
                 Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/cloudmart/${Environment}/auth/token
-
-
   # ==========================================================
   # Product Lambda Role
   # ==========================================================
-
   ProductLambdaRole:
     Type: AWS::IAM::Role
     Properties:
@@ -91,13 +93,18 @@ Resources:
             Version: '2012-10-17'
             Statement:
 
-              # CloudWatch Logs
+              # CloudWatch Logs - Create Log Group
               - Effect: Allow
                 Action:
                   - logs:CreateLogGroup
+                Resource: '*'
+
+              # CloudWatch Logs - Create Stream and Write Logs
+              - Effect: Allow
+                Action:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
-                Resource: '*'
+                Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cloudmart-${Environment}-product:*
 
               # SSM database password
               - Effect: Allow
@@ -120,8 +127,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - events:PutEvents
-                Resource: '*'
-
+                Resource: !Sub arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:event-bus/default
 
   # ==========================================================
   # Customer Lambda Role
