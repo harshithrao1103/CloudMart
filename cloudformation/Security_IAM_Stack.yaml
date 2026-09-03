@@ -410,6 +410,133 @@ Resources:
         - Key: Environment
           Value: !Ref Environment
 
+
+
+  # ==========================================================
+  # SSM VPC Endpoint Security Group
+  # ==========================================================
+
+  SSMEndpointSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: CloudMart SSM VPC Endpoint security group
+
+      VpcId:
+        Fn::ImportValue:
+          !Sub CloudMart-${Environment}-VpcId
+
+      SecurityGroupIngress:
+
+        # Allow HTTPS from CloudMart Lambda Security Group
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          SourceSecurityGroupId: !Ref LambdaSecurityGroup
+
+      Tags:
+        - Key: Name
+          Value: !Sub cloudmart-${Environment}-ssm-endpoint-sg
+
+        - Key: Environment
+          Value: !Ref Environment
+
+
+  # ==========================================================
+  # SSM Interface VPC Endpoint
+  # ==========================================================
+
+  SSMVpcEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId:
+        Fn::ImportValue:
+          !Sub CloudMart-${Environment}-VpcId
+
+      VpcEndpointType: Interface
+
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ssm
+
+      PrivateDnsEnabled: true
+
+      SubnetIds:
+        - Fn::ImportValue:
+            !Sub CloudMart-${Environment}-PrivateSubnet1Id
+        - Fn::ImportValue:
+            !Sub CloudMart-${Environment}-PrivateSubnet2Id
+
+      SecurityGroupIds:
+        - !Ref SSMEndpointSecurityGroup
+
+      Tags:
+        - Key: Name
+          Value: !Sub cloudmart-${Environment}-ssm-endpoint
+
+        - Key: Environment
+          Value: !Ref Environment
+
+
+  # ==========================================================
+  # EventBridge VPC Endpoint Security Group
+  # ==========================================================
+
+  EventBridgeEndpointSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: CloudMart EventBridge VPC Endpoint security group
+
+      VpcId:
+        Fn::ImportValue:
+          !Sub CloudMart-${Environment}-VpcId
+
+      SecurityGroupIngress:
+
+        # Allow HTTPS from CloudMart Lambda Security Group
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          SourceSecurityGroupId: !Ref LambdaSecurityGroup
+
+      Tags:
+        - Key: Name
+          Value: !Sub cloudmart-${Environment}-eventbridge-endpoint-sg
+
+        - Key: Environment
+          Value: !Ref Environment
+
+
+  # ==========================================================
+  # EventBridge Interface VPC Endpoint
+  # ==========================================================
+
+  EventBridgeVpcEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId:
+        Fn::ImportValue:
+          !Sub CloudMart-${Environment}-VpcId
+
+      VpcEndpointType: Interface
+
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.events
+
+      PrivateDnsEnabled: true
+
+      SubnetIds:
+        - Fn::ImportValue:
+            !Sub CloudMart-${Environment}-PrivateSubnet1Id
+        - Fn::ImportValue:
+            !Sub CloudMart-${Environment}-PrivateSubnet2Id
+
+      SecurityGroupIds:
+        - !Ref EventBridgeEndpointSecurityGroup
+
+      Tags:
+        - Key: Name
+          Value: !Sub cloudmart-${Environment}-eventbridge-endpoint
+
+        - Key: Environment
+          Value: !Ref Environment
+
 # ============================================================
 # OUTPUTS
 # ============================================================
@@ -470,6 +597,34 @@ Outputs:
     Value: !Ref RDSSecurityGroup
     Export:
       Name: !Sub CloudMart-${Environment}-RDSSecurityGroupId
+
+
+  SSMEndpointSecurityGroupId:
+    Description: CloudMart SSM VPC Endpoint Security Group ID
+    Value: !Ref SSMEndpointSecurityGroup
+    Export:
+      Name: !Sub CloudMart-${Environment}-SSMEndpointSecurityGroupId
+
+
+  EventBridgeEndpointSecurityGroupId:
+    Description: CloudMart EventBridge VPC Endpoint Security Group ID
+    Value: !Ref EventBridgeEndpointSecurityGroup
+    Export:
+      Name: !Sub CloudMart-${Environment}-EventBridgeEndpointSecurityGroupId
+
+
+  SSMVpcEndpointId:
+    Description: CloudMart SSM VPC Interface Endpoint ID
+    Value: !Ref SSMVpcEndpoint
+    Export:
+      Name: !Sub CloudMart-${Environment}-SSMVpcEndpointId
+
+
+  EventBridgeVpcEndpointId:
+    Description: CloudMart EventBridge VPC Interface Endpoint ID
+    Value: !Ref EventBridgeVpcEndpoint
+    Export:
+      Name: !Sub CloudMart-${Environment}-EventBridgeVpcEndpointId
 
 
   NotificationLambdaRoleArn:
