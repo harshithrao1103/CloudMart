@@ -17,10 +17,10 @@ events = boto3.client("events")
 # ENVIRONMENT VARIABLES
 # ============================================================
 
-RDS_HOST = os.environ["RDS_HOST"]  #RDS database endpoint.
+RDS_HOST = os.environ["RDS_HOST"]
 DB_NAME = os.environ["DB_NAME"]
 DB_USER = os.environ["DB_USER"]
-DB_PASSWORD_PARAMETER = os.environ["DB_PASSWORD_PARAMETER"]  #SSM parameter name containing the DB password
+DB_PASSWORD_PARAMETER = os.environ["DB_PASSWORD_PARAMETER"]
 
 EVENT_BUS_NAME = os.environ.get(
     "EVENT_BUS_NAME",
@@ -76,10 +76,7 @@ def get_db_connection():
 # ============================================================
 # JSON SERIALIZATION
 # ============================================================
-# It converts values returned from MySQL into a format that can be sent as JSON.
 
-# Decimal → converted to float for values like price.
-# isoformat() → converts date/time values into strings.
 def json_serializer(value):
 
     if isinstance(value, Decimal):
@@ -210,13 +207,6 @@ def publish_inventory_event(
 # ============================================================
 # CREATE PRODUCT
 # ============================================================
-# This part handles the input validation when creating a product.
-
-# Reads the JSON request body.
-# Gets , , , and .namedescriptionpriceinventory
-# Checks that required fields are present.
-# Validates that price and inventory are valid non-negative values.
-# Returns an error if the request is invalid.
 
 def create_product(event):
 
@@ -244,7 +234,16 @@ def create_product(event):
 
     quantity = body.get("inventory")
 
-    if not name or price is None or quantity is None:
+    # --------------------------------------------------------
+    # Validate required fields
+    # --------------------------------------------------------
+
+    if (
+        not isinstance(name, str)
+        or not name.strip()
+        or price is None
+        or quantity is None
+    ):
 
         return response(
             400,
@@ -253,6 +252,9 @@ def create_product(event):
                 "name, price and inventory are required"
             }
         )
+
+    # Remove unnecessary spaces around the product name
+    name = name.strip()
 
     try:
 
@@ -599,7 +601,16 @@ def update_product(event, product_id):
 
     quantity = body.get("inventory")
 
-    if not name or price is None or quantity is None:
+    # --------------------------------------------------------
+    # Validate required fields
+    # --------------------------------------------------------
+
+    if (
+        not isinstance(name, str)
+        or not name.strip()
+        or price is None
+        or quantity is None
+    ):
 
         return response(
             400,
@@ -608,6 +619,9 @@ def update_product(event, product_id):
                 "name, price and inventory are required"
             }
         )
+
+    # Remove unnecessary spaces around the product name
+    name = name.strip()
 
     try:
 

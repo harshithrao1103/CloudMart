@@ -43,7 +43,7 @@ Resources:
   # ==========================================================
   # PYMYSQL LAMBDA LAYER
   # ==========================================================
-
+#with this layer multiple lambdas  can reuse the package of code or dependencies
   PyMySQLLayer:
     Type: AWS::Serverless::LayerVersion
 
@@ -54,12 +54,14 @@ Resources:
         Shared PyMySQL dependency for CloudMart Lambda functions
 
       ContentUri: ../layers/pymysql/
+      #tells layer location
 
       CompatibleRuntimes:
         - python3.12
 
     Metadata:
       BuildMethod: python3.12
+      #This tells SAM's build process which runtime/build environment to use when building the Layer.
 
 
   # ==========================================================
@@ -72,15 +74,17 @@ Resources:
     Properties:
 
       FunctionName: !Sub cloudmart-${Environment}-authorizer
+      #This sets the actual Lambda function name.
 
       CodeUri: ../lambda/authorizer/
+      #tells SAM where the Lambda's Python source code is located.
 
       Handler: authorizer_lambda.lambda_handler
-
+            #lambda_handker is function inside authorizer_lambda
       Runtime: python3.12
 
       Timeout: 10
-
+    #execute for a maximum of 10 seconds for one invocation.
       MemorySize: 128
 
       Role:
@@ -123,6 +127,7 @@ Resources:
         - !Ref PyMySQLLayer
 
       VpcConfig:
+      #Put Product Lambda inside your VPC.
 
         SecurityGroupIds:
           - Fn::ImportValue:
@@ -165,7 +170,7 @@ Resources:
             Path: /products
             Method: post
             PayloadFormatVersion: "2.0"
-
+        #Payload = the request information sent from API Gateway to Lambda.
 
         # ======================================================
         # GET /products
@@ -393,6 +398,7 @@ Resources:
 
           ORDER_FAILURE_QUEUE_URL:
             !Ref OrderFailureQueue
+            #same file
 
           ORDER_FAILURE_QUEUE_NAME:
             !Sub cloudmart-${Environment}-order-failures
@@ -517,6 +523,7 @@ Resources:
 
   CloudMartApi:
     Type: AWS::Serverless::HttpApi
+    #Create an API Gateway HTTP API named CloudMartApi.
 
     Properties:
 
@@ -533,6 +540,7 @@ Resources:
           CloudMartAuthorizer:
 
             FunctionArn: !GetAtt AuthorizerLambda.Arn
+            #connects API Gateway to your Lambda authorizer.
 
             FunctionPayloadType: REQUEST
 

@@ -242,11 +242,11 @@ Resources:
                   - events:PutEvents
                 Resource: !Sub arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:event-bus/default
 
-              # SNS order confirmation notification
-              - Effect: Allow
-                Action:
-                  - sns:Publish
-                Resource: '*'
+              # # SNS order confirmation notification
+              # - Effect: Allow
+              #   Action:
+              #     - sns:Publish
+              #   Resource: '*'
 
 
   # ==========================================================
