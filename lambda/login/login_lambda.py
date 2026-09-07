@@ -227,6 +227,8 @@ def login_user(event):
         body = json.loads(
             event.get("body") or "{}"
         )
+        if isinstance(body, str):
+            body = json.loads(body)
 
     except json.JSONDecodeError:
 
