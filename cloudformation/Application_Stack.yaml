@@ -592,6 +592,22 @@ Resources:
 
 
         # ======================================================
+        # PATCH /orders/{orderId}
+        # ======================================================
+
+        UpdateOrderItems:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CloudMartApi
+            Path: /orders/{orderId}
+            Method: patch
+            PayloadFormatVersion: "2.0"
+
+
+
+
+
+        # ======================================================
         # PATCH /orders/{orderId}/cancel
         # ======================================================
 
