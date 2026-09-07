@@ -405,6 +405,8 @@ Resources:
             Path: /login
             Method: post
             PayloadFormatVersion: "2.0"
+            Auth:
+              Authorizer: NONE
 
 
   # ==================================================
