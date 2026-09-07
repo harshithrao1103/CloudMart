@@ -94,7 +94,7 @@ Resources:
       Environment:
         Variables:
 
-          AUTH__PARAMETER:
+          AUTH_TOKEN_PARAMETER:
             !Sub /cloudmart/${Environment}/auth/token
           JWT_SECRET_PARAMETER:
             !Sub /cloudmart/${Environment}/auth/jwt-secret
