@@ -127,6 +127,8 @@ def create_customer(event):
     try:
 
         body = json.loads(event.get("body") or "{}")
+         if isinstance(body, str):
+            body = json.loads(body)
 
     except json.JSONDecodeError:
 
@@ -352,6 +354,8 @@ def update_customer(event, customer_id):
     try:
         print("RAW BODY:", repr(event.get("body")))
         body = json.loads(event.get("body") or "{}")
+        if isinstance(body, str):
+            body = json.loads(body)
 
     except json.JSONDecodeError:
 
