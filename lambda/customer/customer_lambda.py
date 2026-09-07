@@ -350,7 +350,7 @@ def get_customer(customer_id):
 def update_customer(event, customer_id):
 
     try:
-
+        print("RAW BODY:", repr(event.get("body")))
         body = json.loads(event.get("body") or "{}")
 
     except json.JSONDecodeError:
