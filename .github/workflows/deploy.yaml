@@ -212,6 +212,14 @@ jobs:
             --template-file cloudformation/Application_Stack.yaml
 
       # ------------------------------------------------
+      # Prepare Database Initialization Lambda
+      # ------------------------------------------------
+
+      - name: Prepare Database Schema
+        run: |
+          cp database/schema.sql lambda/db_init/schema.sql
+
+      # ------------------------------------------------
       # Build SAM application
       # ------------------------------------------------
 
@@ -238,3 +246,26 @@ jobs:
               SenderEmail="${{ secrets.SENDER_EMAIL }}" \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset
+
+      # ------------------------------------------------
+      # Wait for RDS
+      # ------------------------------------------------
+
+      - name: Wait for RDS
+        run: |
+          aws rds wait db-instance-available \
+            --db-instance-identifier cloudmart-dev-mysql
+
+      # ------------------------------------------------
+      # Initialize Database Schema
+      # ------------------------------------------------
+
+      - name: Initialize Database
+        run: |
+          aws lambda invoke \
+            --function-name cloudmart-dev-db-init \
+            --payload '{}' \
+            --cli-binary-format raw-in-base64-out \
+            db-init-response.json
+
+          cat db-init-response.json

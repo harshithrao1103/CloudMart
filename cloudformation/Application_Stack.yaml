@@ -405,6 +405,69 @@ Resources:
             Path: /login
             Method: post
             PayloadFormatVersion: "2.0"
+
+
+  # ==================================================
+  # DATABASE INITIALIZATION LAMBDA
+  # ==================================================
+
+  DBInitLambda:
+    Type: AWS::Serverless::Function
+
+    Properties:
+      FunctionName: !Sub cloudmart-${Environment}-db-init
+
+      CodeUri: ../lambda/db_init/
+
+      Handler: db_init_lambda.lambda_handler
+
+      Runtime: python3.12
+
+      Timeout: 60
+
+      MemorySize: 256
+
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+              Resource:
+                Fn::Sub:
+                  - arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/cloudmart/${Environment}/db/password
+                  - {}
+
+      Layers:
+        - !Ref PyMySQLLayer
+
+      VpcConfig:
+
+        SecurityGroupIds:
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-LambdaSecurityGroupId
+
+        SubnetIds:
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-PrivateSubnet1Id
+
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-PrivateSubnet2Id
+
+      Environment:
+
+        Variables:
+
+          RDS_HOST:
+            Fn::ImportValue:
+              !Sub CloudMart-${Environment}-RDSEndpoint
+
+          DB_NAME: cloudmart
+
+          DB_USER: admin
+
+          DB_PASSWORD_PARAMETER:
+            !Sub /cloudmart/${Environment}/db/password
+
   # ==========================================================
   # ORDER LAMBDA
   # ==========================================================
