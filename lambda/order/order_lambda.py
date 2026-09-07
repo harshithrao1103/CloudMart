@@ -300,9 +300,9 @@ def create_order(event):
 
             cursor.execute(
                 """
-                SELECT customer_id, email
-                FROM customers
-                WHERE customer_id = %s
+                SELECT user_id, email
+                FROM users
+                WHERE user_id = %s
                 """,
                 (customer_id,)
             )
@@ -660,9 +660,11 @@ def get_customer_orders(customer_id):
 
             cursor.execute(
                 """
-                SELECT customer_id
-                FROM customers
-                WHERE customer_id = %s
+                SELECT user_id
+                FROM users
+                WHERE user_id = %s
+                  AND role = 'customer'
+                  AND is_active = 1
                 """,
                 (customer_id,)
             )
@@ -789,8 +791,8 @@ def update_order(event, order_id):
                     o.customer_id,
                     c.email AS customer_email
                 FROM orders o
-                INNER JOIN customers c
-                    ON o.customer_id = c.customer_id
+                INNER JOIN users c
+                    ON o.customer_id = c.user_id
                 WHERE o.order_id = %s
                 FOR UPDATE
                 """,
@@ -1089,8 +1091,8 @@ def update_order_items(event, order_id):
                     o.status,
                     c.email AS customer_email
                 FROM orders o
-                INNER JOIN customers c
-                    ON o.customer_id = c.customer_id
+                INNER JOIN users c
+                    ON o.customer_id = c.user_id
                 WHERE o.order_id = %s
                 FOR UPDATE
                 """,
@@ -1370,8 +1372,8 @@ def cancel_order(event, order_id):
                     o.customer_id,
                     c.email AS customer_email
                 FROM orders o
-                INNER JOIN customers c
-                    ON o.customer_id = c.customer_id
+                INNER JOIN users c
+                    ON o.customer_id = c.user_id
                 WHERE o.order_id = %s
                 FOR UPDATE
                 """,
