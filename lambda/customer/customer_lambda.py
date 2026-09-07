@@ -2,14 +2,31 @@ import json
 import os
 import boto3
 import pymysql
+import hashlib
+import secrets
+import base64
+
+
+# ============================================================
+# AWS CLIENTS
+# ============================================================
 
 ssm = boto3.client("ssm")
+
+
+# ============================================================
+# ENVIRONMENT VARIABLES
+# ============================================================
 
 RDS_HOST = os.environ["RDS_HOST"]
 DB_NAME = os.environ["DB_NAME"]
 DB_USER = os.environ["DB_USER"]
 DB_PASSWORD_PARAMETER = os.environ["DB_PASSWORD_PARAMETER"]
 
+
+# ============================================================
+# DATABASE CONNECTION
+# ============================================================
 
 def get_db_connection():
 
@@ -31,6 +48,10 @@ def get_db_connection():
     )
 
 
+# ============================================================
+# HTTP RESPONSE
+# ============================================================
+
 def response(status_code, body=None):
 
     result = {
@@ -45,6 +66,34 @@ def response(status_code, body=None):
 
     return result
 
+
+# ============================================================
+# PASSWORD HASHING
+# ============================================================
+
+def hash_password(password):
+    """
+    Hash password using PBKDF2-HMAC-SHA256 with a random salt.
+    """
+
+    salt = secrets.token_bytes(16)
+
+    password_hash = hashlib.pbkdf2_hmac(
+        "sha256",
+        password.encode("utf-8"),
+        salt,
+        310000
+    )
+
+    encoded_salt = base64.b64encode(salt).decode("utf-8")
+    encoded_hash = base64.b64encode(password_hash).decode("utf-8")
+
+    return f"pbkdf2_sha256$310000${encoded_salt}${encoded_hash}"
+
+
+# ============================================================
+# GET USER ID FROM PATH
+# ============================================================
 
 def get_customer_id(event):
 
@@ -69,6 +118,10 @@ def get_customer_id(event):
         return None
 
 
+# ============================================================
+# CREATE CUSTOMER / USER
+# ============================================================
+
 def create_customer(event):
 
     try:
@@ -79,20 +132,42 @@ def create_customer(event):
 
         return response(
             400,
-            {"message": "Invalid JSON request body"}
+            {
+                "message": "Invalid JSON request body"
+            }
         )
 
     name = body.get("name")
     email = body.get("email")
+    password = body.get("password")
 
-    if not name or not email:
+    # --------------------------------------------------------
+    # Validate input
+    # --------------------------------------------------------
+
+    if not name or not email or not password:
 
         return response(
             400,
             {
-                "message": "name and email are required"
+                "message": "name, email and password are required"
             }
         )
+
+    if len(password) < 8:
+
+        return response(
+            400,
+            {
+                "message": "Password must be at least 8 characters"
+            }
+        )
+
+    # --------------------------------------------------------
+    # Hash password
+    # --------------------------------------------------------
+
+    password_hash = hash_password(password)
 
     connection = get_db_connection()
 
@@ -100,11 +175,14 @@ def create_customer(event):
 
         with connection.cursor() as cursor:
 
+            # ------------------------------------------------
             # Check whether email already exists
+            # ------------------------------------------------
+
             cursor.execute(
                 """
-                SELECT customer_id
-                FROM customers
+                SELECT user_id
+                FROM users
                 WHERE email = %s
                 """,
                 (email,)
@@ -115,32 +193,39 @@ def create_customer(event):
                 return response(
                     409,
                     {
-                        "message":
-                        "Customer with email already exists"
+                        "message": "User with email already exists"
                     }
                 )
 
+            # ------------------------------------------------
             # Create customer
+            #
+            # IMPORTANT:
+            # Role is always customer.
+            # The client cannot choose admin.
+            # ------------------------------------------------
+
             cursor.execute(
                 """
-                INSERT INTO customers
-                    (name, email)
+                INSERT INTO users
+                    (name, email, password_hash, role, is_active)
                 VALUES
-                    (%s, %s)
+                    (%s, %s, %s, 'customer', TRUE)
                 """,
-                (name, email)
+                (name, email, password_hash)
             )
 
-            customer_id = cursor.lastrowid
+            user_id = cursor.lastrowid
 
         connection.commit()
 
         return response(
             201,
             {
-                "customer_id": customer_id,
+                "customer_id": user_id,
                 "name": name,
-                "email": email
+                "email": email,
+                "role": "customer"
             }
         )
 
@@ -148,13 +233,15 @@ def create_customer(event):
 
         connection.rollback()
 
-        print("Create customer integrity error:", str(error))
+        print(
+            "Create customer integrity error:",
+            str(error)
+        )
 
         return response(
             409,
             {
-                "message":
-                "Customer with email already exists"
+                "message": "User with email already exists"
             }
         )
 
@@ -162,7 +249,10 @@ def create_customer(event):
 
         connection.rollback()
 
-        print("Create customer error:", str(error))
+        print(
+            "Create customer error:",
+            str(error)
+        )
 
         return response(
             500,
@@ -176,6 +266,10 @@ def create_customer(event):
         connection.close()
 
 
+# ============================================================
+# GET CUSTOMER
+# ============================================================
+
 def get_customer(customer_id):
 
     connection = get_db_connection()
@@ -187,12 +281,15 @@ def get_customer(customer_id):
             cursor.execute(
                 """
                 SELECT
-                    customer_id,
+                    user_id,
                     name,
                     email,
-                    created_at
-                FROM customers
-                WHERE customer_id = %s
+                    role,
+                    is_active,
+                    created_at,
+                    updated_at
+                FROM users
+                WHERE user_id = %s
                 """,
                 (customer_id,)
             )
@@ -208,14 +305,31 @@ def get_customer(customer_id):
                 }
             )
 
+        # ----------------------------------------------------
+        # Do not return password_hash
+        # ----------------------------------------------------
+
         return response(
             200,
-            customer
+            {
+                "customer_id": customer["user_id"],
+                "name": customer["name"],
+                "email": customer["email"],
+                "role": customer["role"],
+                "is_active": customer["is_active"],
+                "created_at": customer["created_at"].isoformat()
+                if customer["created_at"] else None,
+                "updated_at": customer["updated_at"].isoformat()
+                if customer["updated_at"] else None
+            }
         )
 
     except Exception as error:
 
-        print("Get customer error:", str(error))
+        print(
+            "Get customer error:",
+            str(error)
+        )
 
         return response(
             500,
@@ -228,6 +342,10 @@ def get_customer(customer_id):
 
         connection.close()
 
+
+# ============================================================
+# UPDATE CUSTOMER
+# ============================================================
 
 def update_customer(event, customer_id):
 
@@ -246,6 +364,7 @@ def update_customer(event, customer_id):
 
     name = body.get("name")
     email = body.get("email")
+    password = body.get("password")
 
     if not name or not email:
 
@@ -256,18 +375,34 @@ def update_customer(event, customer_id):
             }
         )
 
+    # --------------------------------------------------------
+    # Validate password if provided
+    # --------------------------------------------------------
+
+    if password is not None and len(password) < 8:
+
+        return response(
+            400,
+            {
+                "message": "Password must be at least 8 characters"
+            }
+        )
+
     connection = get_db_connection()
 
     try:
 
         with connection.cursor() as cursor:
 
-            # Check customer exists
+            # ------------------------------------------------
+            # Check user exists
+            # ------------------------------------------------
+
             cursor.execute(
                 """
-                SELECT customer_id
-                FROM customers
-                WHERE customer_id = %s
+                SELECT user_id
+                FROM users
+                WHERE user_id = %s
                 """,
                 (customer_id,)
             )
@@ -281,13 +416,16 @@ def update_customer(event, customer_id):
                     }
                 )
 
-            # Check email is not used by another customer
+            # ------------------------------------------------
+            # Check email is not used by another user
+            # ------------------------------------------------
+
             cursor.execute(
                 """
-                SELECT customer_id
-                FROM customers
+                SELECT user_id
+                FROM users
                 WHERE email = %s
-                  AND customer_id <> %s
+                  AND user_id <> %s
                 """,
                 (email, customer_id)
             )
@@ -298,21 +436,51 @@ def update_customer(event, customer_id):
                     409,
                     {
                         "message":
-                        "Email already belongs to another customer"
+                        "Email already belongs to another user"
                     }
                 )
 
-            # Update customer
-            cursor.execute(
-                """
-                UPDATE customers
-                SET
-                    name = %s,
-                    email = %s
-                WHERE customer_id = %s
-                """,
-                (name, email, customer_id)
-            )
+            # ------------------------------------------------
+            # Update name and email
+            # ------------------------------------------------
+
+            if password:
+
+                password_hash = hash_password(password)
+
+                cursor.execute(
+                    """
+                    UPDATE users
+                    SET
+                        name = %s,
+                        email = %s,
+                        password_hash = %s
+                    WHERE user_id = %s
+                    """,
+                    (
+                        name,
+                        email,
+                        password_hash,
+                        customer_id
+                    )
+                )
+
+            else:
+
+                cursor.execute(
+                    """
+                    UPDATE users
+                    SET
+                        name = %s,
+                        email = %s
+                    WHERE user_id = %s
+                    """,
+                    (
+                        name,
+                        email,
+                        customer_id
+                    )
+                )
 
         connection.commit()
 
@@ -329,13 +497,16 @@ def update_customer(event, customer_id):
 
         connection.rollback()
 
-        print("Update customer integrity error:", str(error))
+        print(
+            "Update customer integrity error:",
+            str(error)
+        )
 
         return response(
             409,
             {
                 "message":
-                "Email already belongs to another customer"
+                "Email already belongs to another user"
             }
         )
 
@@ -343,7 +514,10 @@ def update_customer(event, customer_id):
 
         connection.rollback()
 
-        print("Update customer error:", str(error))
+        print(
+            "Update customer error:",
+            str(error)
+        )
 
         return response(
             500,
@@ -357,6 +531,10 @@ def update_customer(event, customer_id):
         connection.close()
 
 
+# ============================================================
+# DELETE CUSTOMER
+# ============================================================
+
 def delete_customer(customer_id):
 
     connection = get_db_connection()
@@ -365,12 +543,15 @@ def delete_customer(customer_id):
 
         with connection.cursor() as cursor:
 
-            # Check customer exists
+            # ------------------------------------------------
+            # Check user exists
+            # ------------------------------------------------
+
             cursor.execute(
                 """
-                SELECT customer_id
-                FROM customers
-                WHERE customer_id = %s
+                SELECT user_id
+                FROM users
+                WHERE user_id = %s
                 """,
                 (customer_id,)
             )
@@ -384,7 +565,10 @@ def delete_customer(customer_id):
                     }
                 )
 
+            # ------------------------------------------------
             # Check whether customer has orders
+            # ------------------------------------------------
+
             cursor.execute(
                 """
                 SELECT order_id
@@ -406,11 +590,14 @@ def delete_customer(customer_id):
                     }
                 )
 
-            # Delete customer
+            # ------------------------------------------------
+            # Delete user
+            # ------------------------------------------------
+
             cursor.execute(
                 """
-                DELETE FROM customers
-                WHERE customer_id = %s
+                DELETE FROM users
+                WHERE user_id = %s
                 """,
                 (customer_id,)
             )
@@ -423,7 +610,10 @@ def delete_customer(customer_id):
 
         connection.rollback()
 
-        print("Delete customer error:", str(error))
+        print(
+            "Delete customer error:",
+            str(error)
+        )
 
         return response(
             500,
@@ -436,6 +626,10 @@ def delete_customer(customer_id):
 
         connection.close()
 
+
+# ============================================================
+# LAMBDA HANDLER
+# ============================================================
 
 def lambda_handler(event, context):
 
@@ -454,25 +648,44 @@ def lambda_handler(event, context):
     print("HTTP method:", method)
     print("Customer ID:", customer_id)
 
+    # --------------------------------------------------------
     # POST /customers
+    # --------------------------------------------------------
+
     if method == "POST" and customer_id is None:
 
         return create_customer(event)
 
+    # --------------------------------------------------------
     # GET /customers/{customerId}
+    # --------------------------------------------------------
+
     if method == "GET" and customer_id is not None:
 
         return get_customer(customer_id)
 
+    # --------------------------------------------------------
     # PUT /customers/{customerId}
+    # --------------------------------------------------------
+
     if method == "PUT" and customer_id is not None:
 
-        return update_customer(event, customer_id)
+        return update_customer(
+            event,
+            customer_id
+        )
 
+    # --------------------------------------------------------
     # DELETE /customers/{customerId}
+    # --------------------------------------------------------
+
     if method == "DELETE" and customer_id is not None:
 
         return delete_customer(customer_id)
+
+    # --------------------------------------------------------
+    # Unsupported request
+    # --------------------------------------------------------
 
     return response(
         400,

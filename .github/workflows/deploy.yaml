@@ -78,7 +78,8 @@ jobs:
           aws cloudformation deploy \
             --stack-name cloudmart-security-iam-dev \
             --template-file cloudformation/Security_IAM_Stack.yaml \
-            --parameter-overrides Environment=dev \
+            --parameter-overrides \
+              Environment=dev \
             --capabilities CAPABILITY_NAMED_IAM
 
 
@@ -131,6 +132,12 @@ jobs:
           aws ssm put-parameter \
             --name "/cloudmart/dev/auth/token" \
             --value "${{ secrets.AUTH_TOKEN }}" \
+            --type SecureString \
+            --overwrite
+
+          aws ssm put-parameter \
+            --name "/cloudmart/dev/auth/jwt-secret" \
+            --value "${{ secrets.JWT_SECRET }}" \
             --type SecureString \
             --overwrite
 

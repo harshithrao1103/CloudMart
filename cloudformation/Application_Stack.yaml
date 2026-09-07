@@ -94,8 +94,10 @@ Resources:
       Environment:
         Variables:
 
-          AUTH_TOKEN_PARAMETER:
+          AUTH__PARAMETER:
             !Sub /cloudmart/${Environment}/auth/token
+          JWT_SECRET_PARAMETER:
+            !Sub /cloudmart/${Environment}/auth/jwt-secret
 
 
   # ==========================================================
@@ -293,6 +295,8 @@ Resources:
             Path: /customers
             Method: post
             PayloadFormatVersion: "2.0"
+            Auth:
+              Authorizer: NONE
 
 
         # ======================================================
@@ -334,6 +338,73 @@ Resources:
             PayloadFormatVersion: "2.0"
 
 
+  # ==========================================================
+  # LOGIN LAMBDA
+  # ==========================================================
+
+  LoginLambda:
+    Type: AWS::Serverless::Function
+
+    Properties:
+
+      FunctionName: !Sub cloudmart-${Environment}-login
+
+      CodeUri: ../lambda/login/
+
+      Handler: login_lambda.lambda_handler
+
+      Runtime: python3.12
+
+      Timeout: 30
+
+      MemorySize: 256
+
+      Role:
+        Fn::ImportValue:
+          !Sub CloudMart-${Environment}-LoginLambdaRoleArn
+
+      Layers:
+        - !Ref PyMySQLLayer
+
+      VpcConfig:
+
+        SecurityGroupIds:
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-LambdaSecurityGroupId
+
+        SubnetIds:
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-PrivateSubnet1Id
+
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-PrivateSubnet2Id
+
+      Environment:
+        Variables:
+
+          RDS_HOST:
+            Fn::ImportValue:
+              !Sub CloudMart-${Environment}-RDSEndpoint
+
+          DB_NAME: cloudmart
+
+          DB_USER: admin
+
+          DB_PASSWORD_PARAMETER:
+            !Sub /cloudmart/${Environment}/db/password
+
+          JWT_SECRET_PARAMETER:
+            !Sub /cloudmart/${Environment}/auth/jwt-secret
+
+      Events:
+
+        Login:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CloudMartApi
+            Path: /login
+            Method: post
+            PayloadFormatVersion: "2.0"
   # ==========================================================
   # ORDER LAMBDA
   # ==========================================================

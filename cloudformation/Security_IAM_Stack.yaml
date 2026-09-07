@@ -26,6 +26,7 @@ Parameters:
 
 Resources:
 
+
   # ==========================================================
   # Lambda Authorizer Role
   # ==========================================================
@@ -69,9 +70,18 @@ Resources:
                 Action:
                   - ssm:GetParameter
                 Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/cloudmart/${Environment}/auth/token
+
+              # Read JWT secret from SSM
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/cloudmart/${Environment}/auth/jwt-secret
+
+
   # ==========================================================
   # Product Lambda Role
   # ==========================================================
+
   ProductLambdaRole:
     Type: AWS::IAM::Role
     Properties:
@@ -129,6 +139,7 @@ Resources:
                   - events:PutEvents
                 Resource: !Sub arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:event-bus/default
 
+
   # ==========================================================
   # Customer Lambda Role
   # ==========================================================
@@ -167,6 +178,68 @@ Resources:
                 Action:
                   - ssm:GetParameter
                 Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/cloudmart/${Environment}/db/password
+
+              # Lambda VPC networking
+              - Effect: Allow
+                Action:
+                  - ec2:CreateNetworkInterface
+                  - ec2:DescribeNetworkInterfaces
+                  - ec2:DescribeSubnets
+                  - ec2:DeleteNetworkInterface
+                  - ec2:AssignPrivateIpAddresses
+                  - ec2:UnassignPrivateIpAddresses
+                Resource: '*'
+
+
+  # ==========================================================
+  # Login Lambda Role
+  # ==========================================================
+
+  LoginLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub CloudMart-${Environment}-LoginLambdaRole
+
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+
+      Policies:
+        - PolicyName: LoginLambdaPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+
+              # CloudWatch Logs - Create Log Group
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                Resource: '*'
+
+              # CloudWatch Logs - Create Stream and Write Logs
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cloudmart-${Environment}-login:*
+
+              # SSM database password
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/cloudmart/${Environment}/db/password
+
+              # SSM JWT secret
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/cloudmart/${Environment}/auth/jwt-secret
 
               # Lambda VPC networking
               - Effect: Allow
@@ -368,7 +441,6 @@ Resources:
           Value: !Ref Environment
 
 
-
   # ==========================================================
   # Notification Lambda Role
   # ==========================================================
@@ -410,12 +482,12 @@ Resources:
                 Resource: '*'
 
       Tags:
+
         - Key: Project
           Value: CloudMart
 
         - Key: Environment
           Value: !Ref Environment
-
 
 
   # ==========================================================
@@ -440,6 +512,7 @@ Resources:
           SourceSecurityGroupId: !Ref LambdaSecurityGroup
 
       Tags:
+
         - Key: Name
           Value: !Sub cloudmart-${Environment}-ssm-endpoint-sg
 
@@ -474,6 +547,7 @@ Resources:
         - !Ref SSMEndpointSecurityGroup
 
       Tags:
+
         - Key: Name
           Value: !Sub cloudmart-${Environment}-ssm-endpoint
 
@@ -503,6 +577,7 @@ Resources:
           SourceSecurityGroupId: !Ref LambdaSecurityGroup
 
       Tags:
+
         - Key: Name
           Value: !Sub cloudmart-${Environment}-eventbridge-endpoint-sg
 
@@ -537,11 +612,13 @@ Resources:
         - !Ref EventBridgeEndpointSecurityGroup
 
       Tags:
+
         - Key: Name
           Value: !Sub cloudmart-${Environment}-eventbridge-endpoint
 
         - Key: Environment
           Value: !Ref Environment
+
 
 # ============================================================
 # OUTPUTS
@@ -568,6 +645,13 @@ Outputs:
     Value: !GetAtt CustomerLambdaRole.Arn
     Export:
       Name: !Sub CloudMart-${Environment}-CustomerLambdaRoleArn
+
+
+  LoginLambdaRoleArn:
+    Description: Login Lambda IAM Role ARN
+    Value: !GetAtt LoginLambdaRole.Arn
+    Export:
+      Name: !Sub CloudMart-${Environment}-LoginLambdaRoleArn
 
 
   OrderLambdaRoleArn:
