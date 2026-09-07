@@ -600,7 +600,8 @@ def delete_customer(customer_id):
 
             cursor.execute(
                 """
-                DELETE FROM users
+                UPDATE Users
+                SET is_active = 0
                 WHERE user_id = %s
                 """,
                 (customer_id,)
