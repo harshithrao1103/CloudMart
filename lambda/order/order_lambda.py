@@ -1613,7 +1613,13 @@ def cancel_order(event, order_id):
                 )
 
             old_status = order["status"]
-
+            if old_status=="CANCELLED":
+                return response(
+                    409,
+                    {
+                        "message": "Order is already cancelled"
+                    }
+                )
             if old_status not in {
                 "CREATED",
                 "CONFIRMED",
