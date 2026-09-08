@@ -49,6 +49,8 @@
                 "ec2:DescribeSecurityGroups",
                 "ec2:AuthorizeSecurityGroupIngress",
                 "ec2:RevokeSecurityGroupIngress",
+                "ec2:AuthorizeSecurityGroupEgress",
+                "ec2:RevokeSecurityGroupEgress",
                 "ec2:CreateVpcEndpoint",
                 "ec2:DeleteVpcEndpoints",
                 "ec2:DescribeVpcEndpoints",
