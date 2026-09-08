@@ -1539,11 +1539,30 @@ def cancel_order(event, order_id):
 
     try:
 
-        body = json.loads(
-            event.get("body") or "{}"
-        )
+        raw_body = event.get("body")
 
-    except json.JSONDecodeError:
+        if not raw_body:
+            body = {}
+
+        elif isinstance(raw_body, str):
+            body = json.loads(raw_body)
+
+            # Handle double-encoded JSON
+            if isinstance(body, str):
+                body = json.loads(body)
+
+        else:
+            body = raw_body
+
+        if not isinstance(body, dict):
+            return response(
+                400,
+                {
+                    "message": "Invalid JSON request body"
+                }
+            )
+
+    except (json.JSONDecodeError, TypeError):
 
         return response(
             400,
