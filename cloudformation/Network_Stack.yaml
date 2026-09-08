@@ -264,6 +264,66 @@ Resources:
       RouteTableId: !Ref PrivateRouteTable
 
 
+
+  # --------------------------------------------------
+  # SES VPC Endpoint Security Group
+  # --------------------------------------------------
+
+  SESEndpointSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow HTTPS access to Amazon SES VPC endpoint
+      VpcId: !Ref CloudMartVPC
+
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref VpcCidr
+
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+
+      Tags:
+        - Key: Name
+          Value: !Sub cloudmart-${Environment}-ses-endpoint-sg
+
+        - Key: Environment
+          Value: !Ref Environment
+
+
+  # --------------------------------------------------
+  # SES API VPC Endpoint
+  # --------------------------------------------------
+
+  SESEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+
+    Properties:
+      VpcId: !Ref CloudMartVPC
+
+      VpcEndpointType: Interface
+
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.email
+
+      PrivateDnsEnabled: true
+
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+
+      SecurityGroupIds:
+        - !Ref SESEndpointSecurityGroup
+
+      Tags:
+        - Key: Name
+          Value: !Sub cloudmart-${Environment}-ses-endpoint
+
+        - Key: Environment
+          Value: !Ref Environment
+
+
 # ----------------------------------------------------
 # Outputs
 # ----------------------------------------------------
@@ -322,3 +382,10 @@ Outputs:
 
     Export:
       Name: !Sub CloudMart-${Environment}-PrivateRouteTableId
+
+
+  SESEndpointId:
+    Description: CloudMart SES VPC Endpoint ID
+    Value: !Ref SESEndpoint
+    Export:
+      Name: !Sub CloudMart-${Environment}-SESEndpointId
