@@ -893,17 +893,13 @@ def get_customer_orders(event, customer_id):
 
 def update_order(event, order_id):
 
-    # --------------------------------------------------------
-    # ORDER AUTHORIZATION
-    # --------------------------------------------------------
-
-    if not authorize_order(event, order_id):
+    if not is_admin(event):
 
         return response(
             403,
             {
                 "message":
-                "You are not authorized to update this order"
+                "Only admin can update order status"
             }
         )
 
