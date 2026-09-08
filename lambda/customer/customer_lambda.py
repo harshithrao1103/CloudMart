@@ -11,7 +11,37 @@ import base64
 # AWS CLIENTS
 # ============================================================
 
+# ============================================================
+# AWS CLIENTS
+# ============================================================
+
 ssm = boto3.client("ssm")
+ses = boto3.client("sesv2")
+
+
+def request_email_verification(email):
+
+    try:
+
+        ses.create_email_identity(
+            EmailIdentity=email
+        )
+
+        print(
+            f"SES verification requested for {email}"
+        )
+
+    except ses.exceptions.ConflictException:
+
+        print(
+            f"SES identity already exists for {email}"
+        )
+
+    except Exception as error:
+
+        print(
+            f"SES verification request failed: {str(error)}"
+        )
 
 
 # ============================================================
@@ -220,6 +250,12 @@ def create_customer(event):
             user_id = cursor.lastrowid
 
         connection.commit()
+
+        # ------------------------------------------------
+        # Request SES email verification
+        # ------------------------------------------------
+
+        request_email_verification(email)
 
         return response(
             201,
