@@ -149,6 +149,123 @@ def get_query_parameter(event, name):
 
     return value
 
+# ============================================================
+# AUTHORIZATION CONTEXT
+# ============================================================
+
+def get_authorizer_context(event):
+
+    request_context = event.get("requestContext") or {}
+
+    # HTTP API / payload format 2.0
+    authorizer = request_context.get("authorizer") or {}
+
+    context = authorizer.get("lambda")
+
+    if context is None:
+        context = authorizer
+
+    if not isinstance(context, dict):
+        return None
+
+    return context
+
+
+# ============================================================
+# CHECK CUSTOMER ACCESS
+# ============================================================
+
+def is_admin(event):
+
+    context = get_authorizer_context(event)
+
+    if not context:
+        return False
+
+    return context.get("role") == "admin"
+
+
+def get_authenticated_user_id(event):
+
+    context = get_authorizer_context(event)
+
+    if not context:
+        return None
+
+    user_id = context.get("userId")
+
+    if user_id is None:
+        return None
+
+    return str(user_id)
+
+
+def authorize_customer(event, customer_id):
+
+    # Admin can access any customer
+    if is_admin(event):
+        return True
+
+    authenticated_user_id = get_authenticated_user_id(event)
+
+    if authenticated_user_id is None:
+        return False
+
+    return authenticated_user_id == str(customer_id)
+
+
+# ============================================================
+# CHECK ORDER OWNERSHIP
+# ============================================================
+
+def authorize_order(event, order_id):
+
+    # Admin can access any order
+    if is_admin(event):
+        return True
+
+    authenticated_user_id = get_authenticated_user_id(event)
+
+    if authenticated_user_id is None:
+        return False
+
+    connection = get_db_connection()
+
+    try:
+
+        with connection.cursor() as cursor:
+
+            cursor.execute(
+                """
+                SELECT customer_id
+                FROM orders
+                WHERE order_id = %s
+                """,
+                (order_id,)
+            )
+
+            order = cursor.fetchone()
+
+            if not order:
+                return None
+
+            return authenticated_user_id == str(
+                order["customer_id"]
+            )
+
+    except Exception as error:
+
+        print(
+            "Authorization order lookup error:",
+            str(error)
+        )
+
+        return False
+
+    finally:
+
+        connection.close()
+
 
 # ============================================================
 # SEND FAILED ORDER TO SQS
@@ -285,6 +402,21 @@ def create_order(event):
             400,
             {
                 "message": "Invalid customer_id"
+            }
+        )
+
+    # --------------------------------------------------------
+    # CUSTOMER AUTHORIZATION
+    # --------------------------------------------------------
+
+    if not authorize_customer(event, customer_id):
+
+        return response(
+            403,
+            {
+                "message":
+                "You are not authorized to create an order "
+                "for this customer"
             }
         )
 
@@ -562,9 +694,23 @@ def create_order(event):
 # GET ORDER
 # ============================================================
 
-def get_order(order_id):
+def get_order(event, order_id):
+    # --------------------------------------------------------
+    # ORDER AUTHORIZATION
+    # --------------------------------------------------------
+
+    if not authorize_order(event, order_id):
+
+        return response(
+            403,
+            {
+                "message":
+                "You are not authorized to access this order"
+            }
+        )
 
     connection = get_db_connection()
+
 
     try:
 
@@ -646,7 +792,22 @@ def get_order(order_id):
 # GET CUSTOMER ORDERS
 # ============================================================
 
-def get_customer_orders(customer_id):
+def get_customer_orders(event, customer_id):
+
+    # --------------------------------------------------------
+    # CUSTOMER AUTHORIZATION
+    # --------------------------------------------------------
+
+    if not authorize_customer(event, customer_id):
+
+        return response(
+            403,
+            {
+                "message":
+                "You are not authorized to access "
+                "these customer orders"
+            }
+        )
 
     connection = get_db_connection()
 
@@ -724,11 +885,27 @@ def get_customer_orders(customer_id):
         connection.close()
 
 
+
+
 # ============================================================
 # CONFIRM / UPDATE ORDER STATUS
 # ============================================================
 
 def update_order(event, order_id):
+
+    # --------------------------------------------------------
+    # ORDER AUTHORIZATION
+    # --------------------------------------------------------
+
+    if not authorize_order(event, order_id):
+
+        return response(
+            403,
+            {
+                "message":
+                "You are not authorized to update this order"
+            }
+        )
 
     try:
 
@@ -1051,6 +1228,21 @@ def update_order(event, order_id):
 
 def update_order_items(event, order_id):
 
+    # --------------------------------------------------------
+    # ORDER AUTHORIZATION
+    # --------------------------------------------------------
+
+    if not authorize_order(event, order_id):
+
+        return response(
+            403,
+            {
+                "message":
+                "You are not authorized to update "
+                "items in this order"
+            }
+        )
+
     try:
 
         body = json.loads(
@@ -1335,6 +1527,20 @@ def update_order_items(event, order_id):
 
 def cancel_order(event, order_id):
 
+# --------------------------------------------------------
+    # ORDER AUTHORIZATION
+    # --------------------------------------------------------
+
+    if not authorize_order(event, order_id):
+
+        return response(
+            403,
+            {
+                "message":
+                "You are not authorized to cancel this order"
+            }
+        )
+
     try:
 
         body = json.loads(
@@ -1596,6 +1802,10 @@ def lambda_handler(event, context):
     print("Path:", path)
     print("Order ID:", order_id)
     print("Customer ID:", customer_id)
+    print(
+    "Authorizer context:",
+    get_authorizer_context(event)
+    )
 
     # ========================================================
     # POST /orders
@@ -1614,7 +1824,7 @@ def lambda_handler(event, context):
         and order_id is not None
     ):
 
-        return get_order(order_id)
+        return get_order(event, order_id)
 
     # ========================================================
     # GET /orders?customerId=X
@@ -1626,7 +1836,7 @@ def lambda_handler(event, context):
         and customer_id is not None
     ):
 
-        return get_customer_orders(customer_id)
+        return get_customer_orders(event, customer_id)
 
     # ========================================================
     # PUT /orders/{orderId}
