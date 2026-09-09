@@ -110,6 +110,9 @@ def verify_jwt(token):
         payload = json.loads(
             payload_bytes.decode("utf-8")
         )
+        print("JWT payload:", payload)
+        print("JWT exp:", payload.get("exp"))
+        print("Current time:", int(time.time()))
 
 
         # ----------------------------------------------------
@@ -148,8 +151,11 @@ def verify_jwt(token):
             expected_signature,
             provided_signature
         ):
-
             print("JWT signature verification failed")
+            print("Expected signature:", base64.urlsafe_b64encode(expected_signature).decode())
+            print("Provided signature:", encoded_signature)
+
+
 
             return None
 
