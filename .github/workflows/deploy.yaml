@@ -44,7 +44,6 @@ jobs:
             --parameter-overrides Environment=dev \
             --capabilities CAPABILITY_NAMED_IAM
 
-
   # ==================================================
   # SECURITY AND IAM STACK
   # ==================================================
@@ -80,10 +79,11 @@ jobs:
             --template-file cloudformation/Security_IAM_Stack.yaml \
             --parameter-overrides \
               Environment=dev \
+              SenderEmail="${{ secrets.SENDER_EMAIL }}" \
             --capabilities CAPABILITY_NAMED_IAM
 
 
-  # ==================================================
+   # ==================================================
   # DATA / STORAGE STACK
   # ==================================================
 
