@@ -408,8 +408,8 @@ Resources:
                 Action:
                   - ssm:GetParameter
 
-                Resource: !Sub >
-                  arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/cloudmart/${Environment}/db/password
+                Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/cloudmart/${Environment}/db/password
+
 
 
               # ------------------------------------------------
@@ -421,8 +421,8 @@ Resources:
                 Action:
                   - ssm:GetParameter
 
-                Resource: !Sub >
-                  arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/cloudmart/${Environment}/auth/jwt-secret
+                Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/cloudmart/${Environment}/auth/jwt-secret
+
 
 
               # ------------------------------------------------
