@@ -19,10 +19,6 @@ Parameters:
       - prod
     Description: CloudMart environment name
 
-  SenderEmail:
-    Type: String
-    Description: Verified SES sender email for order notifications
-
 
 # ============================================================
 # RESOURCES
@@ -37,87 +33,49 @@ Resources:
 
   LambdaAuthorizerRole:
     Type: AWS::IAM::Role
-
     Properties:
-
       RoleName: !Sub CloudMart-${Environment}-LambdaAuthorizerRole
 
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
-
         Statement:
           - Effect: Allow
-
             Principal:
               Service:
                 - lambda.amazonaws.com
-
             Action:
               - sts:AssumeRole
 
-
       Policies:
-
         - PolicyName: LambdaAuthorizerM2Policy
-
           PolicyDocument:
-
             Version: '2012-10-17'
-
             Statement:
 
-              # ------------------------------------------------
               # CloudWatch Logs - Create Log Group
-              # ------------------------------------------------
-
               - Effect: Allow
-
                 Action:
                   - logs:CreateLogGroup
+                Resource: '*'
 
-                Resource: !Sub >
-                  arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cloudmart-${Environment}-authorizer
-
-
-              # ------------------------------------------------
               # CloudWatch Logs - Create Stream and Write Logs
-              # ------------------------------------------------
-
               - Effect: Allow
-
                 Action:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
+                Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cloudmart-${Environment}-authorizer:*
 
-                Resource: !Sub >
-                  arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cloudmart-${Environment}-authorizer:*
-
-
-              # ------------------------------------------------
               # Read authentication token from SSM
-              # ------------------------------------------------
-
               - Effect: Allow
-
                 Action:
                   - ssm:GetParameter
+                Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/cloudmart/${Environment}/auth/token
 
-                Resource: !Sub >
-                  arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/cloudmart/${Environment}/auth/token
-
-
-              # ------------------------------------------------
               # Read JWT secret from SSM
-              # ------------------------------------------------
-
               - Effect: Allow
-
                 Action:
                   - ssm:GetParameter
-
-                Resource: !Sub >
-                  arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/cloudmart/${Environment}/auth/jwt-secret
-
+                Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/cloudmart/${Environment}/auth/jwt-secret
 
 
   # ==========================================================
@@ -126,84 +84,46 @@ Resources:
 
   ProductLambdaRole:
     Type: AWS::IAM::Role
-
     Properties:
-
       RoleName: !Sub CloudMart-${Environment}-ProductLambdaRole
 
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
-
         Statement:
           - Effect: Allow
-
             Principal:
               Service:
                 - lambda.amazonaws.com
-
             Action:
               - sts:AssumeRole
 
-
       Policies:
-
         - PolicyName: ProductLambdaM2Policy
-
           PolicyDocument:
-
             Version: '2012-10-17'
-
             Statement:
 
-              # ------------------------------------------------
               # CloudWatch Logs - Create Log Group
-              # ------------------------------------------------
-
               - Effect: Allow
-
                 Action:
                   - logs:CreateLogGroup
+                Resource: '*'
 
-                Resource: !Sub >
-                  arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cloudmart-${Environment}-product
-
-
-              # ------------------------------------------------
               # CloudWatch Logs - Create Stream and Write Logs
-              # ------------------------------------------------
-
               - Effect: Allow
-
                 Action:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
+                Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cloudmart-${Environment}-product:*
 
-                Resource: !Sub >
-                  arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cloudmart-${Environment}-product:*
-
-
-              # ------------------------------------------------
               # SSM database password
-              # ------------------------------------------------
-
               - Effect: Allow
-
                 Action:
                   - ssm:GetParameter
+                Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/cloudmart/${Environment}/db/password
 
-                Resource: !Sub >
-                  arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/cloudmart/${Environment}/db/password
-
-
-              # ------------------------------------------------
               # Lambda VPC networking
-              #
-              # These EC2 actions require wildcard resource
-              # permissions in this configuration.
-              # ------------------------------------------------
-
               - Effect: Allow
-
                 Action:
                   - ec2:CreateNetworkInterface
                   - ec2:DescribeNetworkInterfaces
@@ -211,22 +131,13 @@ Resources:
                   - ec2:DeleteNetworkInterface
                   - ec2:AssignPrivateIpAddresses
                   - ec2:UnassignPrivateIpAddresses
-
                 Resource: '*'
 
-
-              # ------------------------------------------------
               # Publish inventory events to EventBridge
-              # ------------------------------------------------
-
               - Effect: Allow
-
                 Action:
                   - events:PutEvents
-
-                Resource: !Sub >
-                  arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:event-bus/default
-
+                Resource: !Sub arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:event-bus/default
 
 
   # ==========================================================
@@ -235,96 +146,47 @@ Resources:
 
   CustomerLambdaRole:
     Type: AWS::IAM::Role
-
     Properties:
-
       RoleName: !Sub CloudMart-${Environment}-CustomerLambdaRole
 
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
-
         Statement:
           - Effect: Allow
-
             Principal:
               Service:
                 - lambda.amazonaws.com
-
             Action:
               - sts:AssumeRole
 
-
       Policies:
-
         - PolicyName: CustomerLambdaM2Policy
-
           PolicyDocument:
-
             Version: '2012-10-17'
-
             Statement:
 
-              # ------------------------------------------------
-              # CloudWatch Logs - Create Log Group
-              # ------------------------------------------------
-
+              # CloudWatch Logs
               - Effect: Allow
-
                 Action:
                   - logs:CreateLogGroup
-
-                Resource: !Sub >
-                  arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cloudmart-${Environment}-customer
-
-
-              # ------------------------------------------------
-              # CloudWatch Logs - Create Stream and Write Logs
-              # ------------------------------------------------
-
-              - Effect: Allow
-
-                Action:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
-
-                Resource: !Sub >
-                  arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cloudmart-${Environment}-customer:*
-
-
-              # ------------------------------------------------
-              # SSM database password
-              # ------------------------------------------------
-
-              - Effect: Allow
-
-                Action:
-                  - ssm:GetParameter
-
-                Resource: !Sub >
-                  arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/cloudmart/${Environment}/db/password
-
-
-              # ------------------------------------------------
-              # SES email verification
-              #
-              # CreateEmailIdentity is not restricted to one
-              # identity in the current design.
-              # ------------------------------------------------
-
-              - Effect: Allow
-
-                Action:
-                  - ses:CreateEmailIdentity
-
                 Resource: '*'
 
-
-              # ------------------------------------------------
-              # Lambda VPC networking
-              # ------------------------------------------------
-
+              # SSM database password
               - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/cloudmart/${Environment}/db/password
 
+              # SES email verification
+              - Effect: Allow
+                Action:
+                  - ses:CreateEmailIdentity
+                Resource: '*'
+
+              # Lambda VPC networking
+              - Effect: Allow
                 Action:
                   - ec2:CreateNetworkInterface
                   - ec2:DescribeNetworkInterfaces
@@ -332,9 +194,7 @@ Resources:
                   - ec2:DeleteNetworkInterface
                   - ec2:AssignPrivateIpAddresses
                   - ec2:UnassignPrivateIpAddresses
-
                 Resource: '*'
-
 
 
   # ==========================================================
@@ -343,94 +203,52 @@ Resources:
 
   LoginLambdaRole:
     Type: AWS::IAM::Role
-
     Properties:
-
       RoleName: !Sub CloudMart-${Environment}-LoginLambdaRole
 
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
-
         Statement:
           - Effect: Allow
-
             Principal:
               Service:
                 - lambda.amazonaws.com
-
             Action:
               - sts:AssumeRole
 
-
       Policies:
-
         - PolicyName: LoginLambdaPolicy
-
           PolicyDocument:
-
             Version: '2012-10-17'
-
             Statement:
 
-              # ------------------------------------------------
               # CloudWatch Logs - Create Log Group
-              # ------------------------------------------------
-
               - Effect: Allow
-
                 Action:
                   - logs:CreateLogGroup
+                Resource: '*'
 
-                Resource: !Sub >
-                  arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cloudmart-${Environment}-login
-
-
-              # ------------------------------------------------
               # CloudWatch Logs - Create Stream and Write Logs
-              # ------------------------------------------------
-
               - Effect: Allow
-
                 Action:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
+                Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cloudmart-${Environment}-login:*
 
-                Resource: !Sub >
-                  arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cloudmart-${Environment}-login:*
-
-
-              # ------------------------------------------------
               # SSM database password
-              # ------------------------------------------------
-
               - Effect: Allow
-
                 Action:
                   - ssm:GetParameter
-
                 Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/cloudmart/${Environment}/db/password
 
-
-
-              # ------------------------------------------------
               # SSM JWT secret
-              # ------------------------------------------------
-
               - Effect: Allow
-
                 Action:
                   - ssm:GetParameter
-
                 Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/cloudmart/${Environment}/auth/jwt-secret
 
-
-
-              # ------------------------------------------------
               # Lambda VPC networking
-              # ------------------------------------------------
-
               - Effect: Allow
-
                 Action:
                   - ec2:CreateNetworkInterface
                   - ec2:DescribeNetworkInterfaces
@@ -438,9 +256,7 @@ Resources:
                   - ec2:DeleteNetworkInterface
                   - ec2:AssignPrivateIpAddresses
                   - ec2:UnassignPrivateIpAddresses
-
                 Resource: '*'
-
 
 
   # ==========================================================
@@ -449,81 +265,41 @@ Resources:
 
   OrderLambdaRole:
     Type: AWS::IAM::Role
-
     Properties:
-
       RoleName: !Sub CloudMart-${Environment}-OrderLambdaRole
 
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
-
         Statement:
           - Effect: Allow
-
             Principal:
               Service:
                 - lambda.amazonaws.com
-
             Action:
               - sts:AssumeRole
 
-
       Policies:
-
         - PolicyName: OrderLambdaM2Policy
-
           PolicyDocument:
-
             Version: '2012-10-17'
-
             Statement:
 
-              # ------------------------------------------------
-              # CloudWatch Logs - Create Log Group
-              # ------------------------------------------------
-
+              # CloudWatch Logs
               - Effect: Allow
-
                 Action:
                   - logs:CreateLogGroup
-
-                Resource: !Sub >
-                  arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cloudmart-${Environment}-order
-
-
-              # ------------------------------------------------
-              # CloudWatch Logs - Create Stream and Write Logs
-              # ------------------------------------------------
-
-              - Effect: Allow
-
-                Action:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
+                Resource: '*'
 
-                Resource: !Sub >
-                  arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cloudmart-${Environment}-order:*
-
-
-              # ------------------------------------------------
               # SSM database password
-              # ------------------------------------------------
-
               - Effect: Allow
-
                 Action:
                   - ssm:GetParameter
+                Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/cloudmart/${Environment}/db/password
 
-                Resource: !Sub >
-                  arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/cloudmart/${Environment}/db/password
-
-
-              # ------------------------------------------------
               # Lambda VPC networking
-              # ------------------------------------------------
-
               - Effect: Allow
-
                 Action:
                   - ec2:CreateNetworkInterface
                   - ec2:DescribeNetworkInterfaces
@@ -531,45 +307,25 @@ Resources:
                   - ec2:DeleteNetworkInterface
                   - ec2:AssignPrivateIpAddresses
                   - ec2:UnassignPrivateIpAddresses
-
                 Resource: '*'
 
-
-              # ------------------------------------------------
               # SQS order failure queue
-              # ------------------------------------------------
-
               - Effect: Allow
-
                 Action:
                   - sqs:SendMessage
+                Resource: !Sub arn:${AWS::Partition}:sqs:${AWS::Region}:${AWS::AccountId}:cloudmart-${Environment}-order-failures
 
-                Resource: !Sub >
-                  arn:${AWS::Partition}:sqs:${AWS::Region}:${AWS::AccountId}:cloudmart-${Environment}-order-failures
-
-
-              # ------------------------------------------------
               # EventBridge order events
-              # ------------------------------------------------
-
               - Effect: Allow
-
                 Action:
                   - events:PutEvents
+                Resource: !Sub arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:event-bus/default
 
-                Resource: !Sub >
-                  arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:event-bus/default
-
-
-              # ------------------------------------------------
-              # SNS order confirmation notification
-              # ------------------------------------------------
-
+              # # SNS order confirmation notification
               # - Effect: Allow
               #   Action:
               #     - sns:Publish
               #   Resource: '*'
-
 
 
   # ==========================================================
@@ -578,61 +334,32 @@ Resources:
 
   StatisticsLambdaRole:
     Type: AWS::IAM::Role
-
     Properties:
-
       RoleName: !Sub CloudMart-${Environment}-StatisticsLambdaRole
 
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
-
         Statement:
           - Effect: Allow
-
             Principal:
               Service:
                 - lambda.amazonaws.com
-
             Action:
               - sts:AssumeRole
 
-
       Policies:
-
         - PolicyName: StatisticsLambdaM2Policy
-
           PolicyDocument:
-
             Version: '2012-10-17'
-
             Statement:
 
-              # ------------------------------------------------
-              # CloudWatch Logs - Create Log Group
-              # ------------------------------------------------
-
+              # CloudWatch Logs
               - Effect: Allow
-
                 Action:
                   - logs:CreateLogGroup
-
-                Resource: !Sub >
-                  arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cloudmart-${Environment}-statistics
-
-
-              # ------------------------------------------------
-              # CloudWatch Logs - Create Stream and Write Logs
-              # ------------------------------------------------
-
-              - Effect: Allow
-
-                Action:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
-
-                Resource: !Sub >
-                  arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cloudmart-${Environment}-statistics:*
-
+                Resource: '*'
 
 
   # ==========================================================
@@ -641,9 +368,7 @@ Resources:
 
   EC2SecurityGroup:
     Type: AWS::EC2::SecurityGroup
-
     Properties:
-
       GroupDescription: CloudMart EC2 security group
 
       VpcId:
@@ -671,16 +396,13 @@ Resources:
           Value: !Ref Environment
 
 
-
   # ==========================================================
   # LAMBDA SECURITY GROUP
   # ==========================================================
 
   LambdaSecurityGroup:
     Type: AWS::EC2::SecurityGroup
-
     Properties:
-
       GroupDescription: CloudMart Lambda security group
 
       VpcId:
@@ -696,16 +418,13 @@ Resources:
           Value: !Ref Environment
 
 
-
   # ==========================================================
   # RDS SECURITY GROUP
   # ==========================================================
 
   RDSSecurityGroup:
     Type: AWS::EC2::SecurityGroup
-
     Properties:
-
       GroupDescription: CloudMart RDS MySQL security group
 
       VpcId:
@@ -728,84 +447,45 @@ Resources:
           Value: !Ref Environment
 
 
-
   # ==========================================================
   # Notification Lambda Role
   # ==========================================================
 
   NotificationLambdaRole:
     Type: AWS::IAM::Role
-
     Properties:
-
       RoleName: !Sub CloudMart-${Environment}-NotificationLambdaRole
 
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
-
         Statement:
           - Effect: Allow
-
             Principal:
               Service:
                 - lambda.amazonaws.com
-
             Action:
               - sts:AssumeRole
 
-
       Policies:
-
         - PolicyName: NotificationLambdaPolicy
-
           PolicyDocument:
-
             Version: '2012-10-17'
-
             Statement:
 
-              # ------------------------------------------------
-              # CloudWatch Logs - Create Log Group
-              # ------------------------------------------------
-
+              # CloudWatch Logs
               - Effect: Allow
-
                 Action:
                   - logs:CreateLogGroup
-
-                Resource: !Sub >
-                  arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cloudmart-${Environment}-notification
-
-
-              # ------------------------------------------------
-              # CloudWatch Logs - Create Stream and Write Logs
-              # ------------------------------------------------
-
-              - Effect: Allow
-
-                Action:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
+                Resource: '*'
 
-                Resource: !Sub >
-                  arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cloudmart-${Environment}-notification:*
-
-
-              # ------------------------------------------------
               # Amazon SES
-              #
-              # Restrict sending to the verified sender identity.
-              # ------------------------------------------------
-
               - Effect: Allow
-
                 Action:
                   - ses:SendEmail
                   - ses:SendRawEmail
-
-                Resource: !Sub >
-                  arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SenderEmail}
-
+                Resource: '*'
 
       Tags:
 
@@ -816,16 +496,13 @@ Resources:
           Value: !Ref Environment
 
 
-
   # ==========================================================
   # SSM VPC Endpoint Security Group
   # ==========================================================
 
   SSMEndpointSecurityGroup:
     Type: AWS::EC2::SecurityGroup
-
     Properties:
-
       GroupDescription: CloudMart SSM VPC Endpoint security group
 
       VpcId:
@@ -835,7 +512,6 @@ Resources:
       SecurityGroupIngress:
 
         # Allow HTTPS from CloudMart Lambda Security Group
-
         - IpProtocol: tcp
           FromPort: 443
           ToPort: 443
@@ -850,16 +526,13 @@ Resources:
           Value: !Ref Environment
 
 
-
   # ==========================================================
   # SSM Interface VPC Endpoint
   # ==========================================================
 
   SSMVpcEndpoint:
     Type: AWS::EC2::VPCEndpoint
-
     Properties:
-
       VpcId:
         Fn::ImportValue:
           !Sub CloudMart-${Environment}-VpcId
@@ -871,15 +544,12 @@ Resources:
       PrivateDnsEnabled: true
 
       SubnetIds:
-
         - Fn::ImportValue:
             !Sub CloudMart-${Environment}-PrivateSubnet1Id
-
         - Fn::ImportValue:
             !Sub CloudMart-${Environment}-PrivateSubnet2Id
 
       SecurityGroupIds:
-
         - !Ref SSMEndpointSecurityGroup
 
       Tags:
@@ -891,16 +561,13 @@ Resources:
           Value: !Ref Environment
 
 
-
   # ==========================================================
   # EventBridge VPC Endpoint Security Group
   # ==========================================================
 
   EventBridgeEndpointSecurityGroup:
     Type: AWS::EC2::SecurityGroup
-
     Properties:
-
       GroupDescription: CloudMart EventBridge VPC Endpoint security group
 
       VpcId:
@@ -910,7 +577,6 @@ Resources:
       SecurityGroupIngress:
 
         # Allow HTTPS from CloudMart Lambda Security Group
-
         - IpProtocol: tcp
           FromPort: 443
           ToPort: 443
@@ -925,16 +591,13 @@ Resources:
           Value: !Ref Environment
 
 
-
   # ==========================================================
   # EventBridge Interface VPC Endpoint
   # ==========================================================
 
   EventBridgeVpcEndpoint:
     Type: AWS::EC2::VPCEndpoint
-
     Properties:
-
       VpcId:
         Fn::ImportValue:
           !Sub CloudMart-${Environment}-VpcId
@@ -946,15 +609,12 @@ Resources:
       PrivateDnsEnabled: true
 
       SubnetIds:
-
         - Fn::ImportValue:
             !Sub CloudMart-${Environment}-PrivateSubnet1Id
-
         - Fn::ImportValue:
             !Sub CloudMart-${Environment}-PrivateSubnet2Id
 
       SecurityGroupIds:
-
         - !Ref EventBridgeEndpointSecurityGroup
 
       Tags:
@@ -966,18 +626,15 @@ Resources:
           Value: !Ref Environment
 
 
-
 # ============================================================
 # OUTPUTS
 # ============================================================
 
 Outputs:
 
-
   LambdaAuthorizerRoleArn:
     Description: Lambda Authorizer IAM Role ARN
     Value: !GetAtt LambdaAuthorizerRole.Arn
-
     Export:
       Name: !Sub CloudMart-${Environment}-LambdaAuthorizerRoleArn
 
@@ -985,7 +642,6 @@ Outputs:
   ProductLambdaRoleArn:
     Description: Product Lambda IAM Role ARN
     Value: !GetAtt ProductLambdaRole.Arn
-
     Export:
       Name: !Sub CloudMart-${Environment}-ProductLambdaRoleArn
 
@@ -993,7 +649,6 @@ Outputs:
   CustomerLambdaRoleArn:
     Description: Customer Lambda IAM Role ARN
     Value: !GetAtt CustomerLambdaRole.Arn
-
     Export:
       Name: !Sub CloudMart-${Environment}-CustomerLambdaRoleArn
 
@@ -1001,7 +656,6 @@ Outputs:
   LoginLambdaRoleArn:
     Description: Login Lambda IAM Role ARN
     Value: !GetAtt LoginLambdaRole.Arn
-
     Export:
       Name: !Sub CloudMart-${Environment}-LoginLambdaRoleArn
 
@@ -1009,7 +663,6 @@ Outputs:
   OrderLambdaRoleArn:
     Description: Order Lambda IAM Role ARN
     Value: !GetAtt OrderLambdaRole.Arn
-
     Export:
       Name: !Sub CloudMart-${Environment}-OrderLambdaRoleArn
 
@@ -1017,7 +670,6 @@ Outputs:
   StatisticsLambdaRoleArn:
     Description: Statistics Lambda IAM Role ARN
     Value: !GetAtt StatisticsLambdaRole.Arn
-
     Export:
       Name: !Sub CloudMart-${Environment}-StatisticsLambdaRoleArn
 
@@ -1025,7 +677,6 @@ Outputs:
   EC2SecurityGroupId:
     Description: CloudMart EC2 Security Group ID
     Value: !Ref EC2SecurityGroup
-
     Export:
       Name: !Sub CloudMart-${Environment}-EC2SecurityGroupId
 
@@ -1033,31 +684,27 @@ Outputs:
   LambdaSecurityGroupId:
     Description: CloudMart Lambda Security Group ID
     Value: !Ref LambdaSecurityGroup
-
     Export:
       Name: !Sub CloudMart-${Environment}-LambdaSecurityGroupId
 
 
   RDSSecurityGroupId:
-    Description: CloudMart RDS security group ID
+    Description: CloudMart RDS Security Group ID
     Value: !Ref RDSSecurityGroup
-
     Export:
       Name: !Sub CloudMart-${Environment}-RDSSecurityGroupId
 
 
   SSMEndpointSecurityGroupId:
-    Description: CloudMart SSM Endpoint Security Group ID
+    Description: CloudMart SSM VPC Endpoint Security Group ID
     Value: !Ref SSMEndpointSecurityGroup
-
     Export:
       Name: !Sub CloudMart-${Environment}-SSMEndpointSecurityGroupId
 
 
   EventBridgeEndpointSecurityGroupId:
-    Description: CloudMart EventBridge Endpoint Security Group ID
+    Description: CloudMart EventBridge VPC Endpoint Security Group ID
     Value: !Ref EventBridgeEndpointSecurityGroup
-
     Export:
       Name: !Sub CloudMart-${Environment}-EventBridgeEndpointSecurityGroupId
 
@@ -1065,7 +712,6 @@ Outputs:
   SSMVpcEndpointId:
     Description: CloudMart SSM VPC Interface Endpoint ID
     Value: !Ref SSMVpcEndpoint
-
     Export:
       Name: !Sub CloudMart-${Environment}-SSMVpcEndpointId
 
@@ -1073,7 +719,6 @@ Outputs:
   EventBridgeVpcEndpointId:
     Description: CloudMart EventBridge VPC Interface Endpoint ID
     Value: !Ref EventBridgeVpcEndpoint
-
     Export:
       Name: !Sub CloudMart-${Environment}-EventBridgeVpcEndpointId
 
@@ -1081,6 +726,5 @@ Outputs:
   NotificationLambdaRoleArn:
     Description: Notification Lambda IAM Role ARN
     Value: !GetAtt NotificationLambdaRole.Arn
-
     Export:
       Name: !Sub CloudMart-${Environment}-NotificationLambdaRoleArn
