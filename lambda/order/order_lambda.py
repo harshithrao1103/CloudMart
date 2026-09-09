@@ -64,7 +64,7 @@ def get_db_connection():
 
 
 # ============================================================
-# DECIMAL CONVERSION
+# DECIMAL / DATETIME CONVERSION
 # ============================================================
 
 def decimal_to_float(value):
@@ -98,6 +98,54 @@ def response(status_code, body=None):
         )
 
     return result
+
+
+# ============================================================
+# REQUEST BODY PARSER
+#
+# Handles:
+#
+# 1. Normal JSON object
+# 2. JSON string containing JSON
+# 3. Multiple JSON encoding levels
+#
+# This fixes:
+# AttributeError: 'str' object has no attribute 'get'
+# ============================================================
+
+def parse_request_body(event):
+
+    raw_body = event.get("body")
+
+    if raw_body is None or raw_body == "":
+        return {}
+
+    body = raw_body
+
+    # --------------------------------------------------------
+    # Decode repeatedly while body is a string.
+    #
+    # This handles both:
+    #
+    # {"customer_id": 11, "items": [...]}
+    #
+    # and JSON encoded versions of the above.
+    # --------------------------------------------------------
+
+    for _ in range(5):
+
+        if not isinstance(body, str):
+            break
+
+        body = json.loads(body)
+
+    if not isinstance(body, dict):
+
+        raise ValueError(
+            "Request body must contain a JSON object"
+        )
+
+    return body
 
 
 # ============================================================
@@ -149,6 +197,7 @@ def get_query_parameter(event, name):
 
     return value
 
+
 # ============================================================
 # AUTHORIZATION CONTEXT
 # ============================================================
@@ -157,9 +206,9 @@ def get_authorizer_context(event):
 
     request_context = event.get("requestContext") or {}
 
-    # HTTP API / payload format 2.0
     authorizer = request_context.get("authorizer") or {}
 
+    # HTTP API / payload format 2.0
     context = authorizer.get("lambda")
 
     if context is None:
@@ -172,7 +221,7 @@ def get_authorizer_context(event):
 
 
 # ============================================================
-# CHECK CUSTOMER ACCESS
+# CHECK ADMIN
 # ============================================================
 
 def is_admin(event):
@@ -184,6 +233,10 @@ def is_admin(event):
 
     return context.get("role") == "admin"
 
+
+# ============================================================
+# GET AUTHENTICATED USER
+# ============================================================
 
 def get_authenticated_user_id(event):
 
@@ -200,6 +253,10 @@ def get_authenticated_user_id(event):
     return str(user_id)
 
 
+# ============================================================
+# AUTHORIZE CUSTOMER
+# ============================================================
+
 def authorize_customer(event, customer_id):
 
     # Admin can access any customer
@@ -215,7 +272,7 @@ def authorize_customer(event, customer_id):
 
 
 # ============================================================
-# CHECK ORDER OWNERSHIP
+# AUTHORIZE ORDER OWNERSHIP
 # ============================================================
 
 def authorize_order(event, order_id):
@@ -325,7 +382,7 @@ def publish_order_event(detail_type, detail):
 
     try:
 
-        events.put_events(
+        result = events.put_events(
             Entries=[
                 {
                     "EventBusName": EVENT_BUS_NAME,
@@ -342,6 +399,19 @@ def publish_order_event(detail_type, detail):
         print(
             f"Published EventBridge event: {detail_type}"
         )
+
+        # ----------------------------------------------------
+        # Log failed EventBridge entries if any
+        # ----------------------------------------------------
+
+        if result.get("FailedEntryCount", 0) > 0:
+
+            print(
+                "EventBridge failed entries:",
+                json.dumps(result)
+            )
+
+            return False
 
         return True
 
@@ -361,13 +431,20 @@ def publish_order_event(detail_type, detail):
 
 def create_order(event):
 
+    # --------------------------------------------------------
+    # Parse request body
+    # --------------------------------------------------------
+
     try:
 
-        body = json.loads(
-            event.get("body") or "{}"
-        )
+        body = parse_request_body(event)
 
-    except json.JSONDecodeError:
+    except (json.JSONDecodeError, TypeError, ValueError) as error:
+
+        print(
+            "Request body parsing error:",
+            str(error)
+        )
 
         return response(
             400,
@@ -376,18 +453,16 @@ def create_order(event):
             }
         )
 
+    # --------------------------------------------------------
+    # Get request values
+    # --------------------------------------------------------
+
     customer_id = body.get("customer_id")
     items = body.get("items")
 
-    if not customer_id or not isinstance(items, list) or not items:
-
-        return response(
-            400,
-            {
-                "message":
-                "customer_id and at least one item are required"
-            }
-        )
+    # --------------------------------------------------------
+    # Validate customer ID
+    # --------------------------------------------------------
 
     try:
 
@@ -402,6 +477,20 @@ def create_order(event):
             400,
             {
                 "message": "Invalid customer_id"
+            }
+        )
+
+    # --------------------------------------------------------
+    # Validate items
+    # --------------------------------------------------------
+
+    if not isinstance(items, list) or not items:
+
+        return response(
+            400,
+            {
+                "message":
+                "customer_id and at least one item are required"
             }
         )
 
@@ -426,13 +515,15 @@ def create_order(event):
 
         with connection.cursor() as cursor:
 
-            # ------------------------------------------------
-            # Check customer
-            # ------------------------------------------------
+            # =================================================
+            # CHECK CUSTOMER
+            # =================================================
 
             cursor.execute(
                 """
-                SELECT user_id, email
+                SELECT
+                    user_id,
+                    email
                 FROM users
                 WHERE user_id = %s
                 """,
@@ -453,16 +544,37 @@ def create_order(event):
                 )
 
             total_amount = Decimal("0.00")
+
             order_items = []
 
-            # ------------------------------------------------
-            # Validate products and inventory
-            # ------------------------------------------------
+            # =================================================
+            # VALIDATE PRODUCTS AND INVENTORY
+            # =================================================
 
-            for item in items:
+            for item_index, item in enumerate(items):
+
+                # ------------------------------------------------
+                # Each item must be a JSON object
+                # ------------------------------------------------
+
+                if not isinstance(item, dict):
+
+                    connection.rollback()
+
+                    return response(
+                        422,
+                        {
+                            "message":
+                            f"Invalid item at index {item_index}"
+                        }
+                    )
 
                 product_id = item.get("product_id")
                 quantity = item.get("quantity")
+
+                # ------------------------------------------------
+                # Validate product ID
+                # ------------------------------------------------
 
                 try:
 
@@ -484,6 +596,10 @@ def create_order(event):
                         }
                     )
 
+                # ------------------------------------------------
+                # Get product and inventory
+                # ------------------------------------------------
+
                 cursor.execute(
                     """
                     SELECT
@@ -495,6 +611,7 @@ def create_order(event):
                     INNER JOIN products p
                         ON i.product_id = p.product_id
                     WHERE i.product_id = %s
+                    FOR UPDATE
                     """,
                     (product_id,)
                 )
@@ -513,6 +630,10 @@ def create_order(event):
                         }
                     )
 
+                # ------------------------------------------------
+                # Check active product
+                # ------------------------------------------------
+
                 if not product["is_active"]:
 
                     connection.rollback()
@@ -524,6 +645,10 @@ def create_order(event):
                             f"Product {product_id} is inactive"
                         }
                     )
+
+                # ------------------------------------------------
+                # Check inventory
+                # ------------------------------------------------
 
                 if product["quantity"] < quantity:
 
@@ -552,12 +677,11 @@ def create_order(event):
                     }
                 )
 
-            # ------------------------------------------------
-            # Create order
+            # =================================================
+            # CREATE ORDER
             #
-            # IMPORTANT:
             # Inventory is NOT deducted here.
-            # ------------------------------------------------
+            # =================================================
 
             cursor.execute(
                 """
@@ -583,11 +707,9 @@ def create_order(event):
 
             order_id = cursor.lastrowid
 
-            # ------------------------------------------------
-            # Create order items
-            #
-            # Inventory remains unchanged until CONFIRMED.
-            # ------------------------------------------------
+            # =================================================
+            # CREATE ORDER ITEMS
+            # =================================================
 
             for item in order_items:
 
@@ -616,9 +738,9 @@ def create_order(event):
                     )
                 )
 
-            # ------------------------------------------------
-            # Initial order history
-            # ------------------------------------------------
+            # =================================================
+            # INITIAL ORDER HISTORY
+            # =================================================
 
             cursor.execute(
                 """
@@ -644,7 +766,15 @@ def create_order(event):
                 )
             )
 
+        # =====================================================
+        # COMMIT
+        # =====================================================
+
         connection.commit()
+
+        # =====================================================
+        # PUBLISH EVENT
+        # =====================================================
 
         publish_order_event(
             "OrderCreated",
@@ -657,6 +787,10 @@ def create_order(event):
                 "items": order_items
             }
         )
+
+        # =====================================================
+        # RESPONSE
+        # =====================================================
 
         return response(
             201,
@@ -695,11 +829,17 @@ def create_order(event):
 # ============================================================
 
 def get_order(event, order_id):
+
     # --------------------------------------------------------
     # ORDER AUTHORIZATION
     # --------------------------------------------------------
 
-    if not authorize_order(event, order_id):
+    authorization_result = authorize_order(
+        event,
+        order_id
+    )
+
+    if authorization_result is False:
 
         return response(
             403,
@@ -709,12 +849,28 @@ def get_order(event, order_id):
             }
         )
 
-    connection = get_db_connection()
+    # --------------------------------------------------------
+    # If order does not exist
+    # --------------------------------------------------------
 
+    if authorization_result is None:
+
+        return response(
+            404,
+            {
+                "message": "Order not found"
+            }
+        )
+
+    connection = get_db_connection()
 
     try:
 
         with connection.cursor() as cursor:
+
+            # =================================================
+            # GET ORDER
+            # =================================================
 
             cursor.execute(
                 """
@@ -742,6 +898,10 @@ def get_order(event, order_id):
                     }
                 )
 
+            # =================================================
+            # GET ORDER ITEMS
+            # =================================================
+
             cursor.execute(
                 """
                 SELECT
@@ -750,7 +910,9 @@ def get_order(event, order_id):
                     p.name AS product_name,
                     oi.quantity,
                     oi.unit_price,
-                    (oi.quantity * oi.unit_price) AS item_total
+                    (
+                        oi.quantity * oi.unit_price
+                    ) AS item_total
                 FROM order_items oi
                 INNER JOIN products p
                     ON oi.product_id = p.product_id
@@ -798,7 +960,10 @@ def get_customer_orders(event, customer_id):
     # CUSTOMER AUTHORIZATION
     # --------------------------------------------------------
 
-    if not authorize_customer(event, customer_id):
+    if not authorize_customer(
+        event,
+        customer_id
+    ):
 
         return response(
             403,
@@ -815,13 +980,14 @@ def get_customer_orders(event, customer_id):
 
         with connection.cursor() as cursor:
 
-            # ------------------------------------------------
-            # Check customer
-            # ------------------------------------------------
+            # =================================================
+            # CHECK CUSTOMER
+            # =================================================
 
             cursor.execute(
                 """
-                SELECT user_id
+                SELECT
+                    user_id
                 FROM users
                 WHERE user_id = %s
                   AND role = 'customer'
@@ -839,9 +1005,9 @@ def get_customer_orders(event, customer_id):
                     }
                 )
 
-            # ------------------------------------------------
-            # Get orders
-            # ------------------------------------------------
+            # =================================================
+            # GET ORDERS
+            # =================================================
 
             cursor.execute(
                 """
@@ -885,13 +1051,15 @@ def get_customer_orders(event, customer_id):
         connection.close()
 
 
-
-
 # ============================================================
 # CONFIRM / UPDATE ORDER STATUS
 # ============================================================
 
 def update_order(event, order_id):
+
+    # --------------------------------------------------------
+    # ADMIN ONLY
+    # --------------------------------------------------------
 
     if not is_admin(event):
 
@@ -903,13 +1071,20 @@ def update_order(event, order_id):
             }
         )
 
+    # --------------------------------------------------------
+    # Parse body
+    # --------------------------------------------------------
+
     try:
 
-        body = json.loads(
-            event.get("body") or "{}"
-        )
+        body = parse_request_body(event)
 
-    except json.JSONDecodeError:
+    except (json.JSONDecodeError, TypeError, ValueError) as error:
+
+        print(
+            "Update order body parsing error:",
+            str(error)
+        )
 
         return response(
             400,
@@ -928,6 +1103,10 @@ def update_order(event, order_id):
                 "message": "status is required"
             }
         )
+
+    # --------------------------------------------------------
+    # Allowed statuses
+    # --------------------------------------------------------
 
     allowed_statuses = {
         "CREATED",
@@ -953,9 +1132,9 @@ def update_order(event, order_id):
 
         with connection.cursor() as cursor:
 
-            # ------------------------------------------------
-            # Lock order
-            # ------------------------------------------------
+            # =================================================
+            # LOCK ORDER
+            # =================================================
 
             cursor.execute(
                 """
@@ -995,9 +1174,9 @@ def update_order(event, order_id):
                     }
                 )
 
-            # ------------------------------------------------
-            # Valid state transitions
-            # ------------------------------------------------
+            # =================================================
+            # VALID STATE TRANSITIONS
+            # =================================================
 
             valid_transitions = {
 
@@ -1039,11 +1218,11 @@ def update_order(event, order_id):
                     }
                 )
 
-            # ------------------------------------------------
+            # =================================================
             # CONFIRM ORDER
             #
-            # This is where inventory is deducted.
-            # ------------------------------------------------
+            # Deduct inventory only when order is confirmed.
+            # =================================================
 
             if new_status == "CONFIRMED":
 
@@ -1070,6 +1249,10 @@ def update_order(event, order_id):
                         "Order has no inventory items"
                     )
 
+                # ------------------------------------------------
+                # Check all inventory BEFORE deducting anything
+                # ------------------------------------------------
+
                 for item in items:
 
                     if (
@@ -1082,9 +1265,9 @@ def update_order(event, order_id):
                             f"product {item['product_id']}"
                         )
 
-                # --------------------------------------------
+                # ------------------------------------------------
                 # Deduct inventory
-                # --------------------------------------------
+                # ------------------------------------------------
 
                 for item in items:
 
@@ -1102,9 +1285,9 @@ def update_order(event, order_id):
                         )
                     )
 
-            # ------------------------------------------------
-            # Update order status
-            # ------------------------------------------------
+            # =================================================
+            # UPDATE ORDER STATUS
+            # =================================================
 
             cursor.execute(
                 """
@@ -1120,9 +1303,9 @@ def update_order(event, order_id):
                 )
             )
 
-            # ------------------------------------------------
-            # Add order history
-            # ------------------------------------------------
+            # =================================================
+            # ORDER HISTORY
+            # =================================================
 
             cursor.execute(
                 """
@@ -1149,24 +1332,44 @@ def update_order(event, order_id):
                 )
             )
 
+        # =====================================================
+        # COMMIT
+        # =====================================================
+
         connection.commit()
 
+        # =====================================================
+        # EVENTBRIDGE EVENT
+        # =====================================================
+
         status_event_map = {
-            "CONFIRMED": "OrderConfirmed",
-            "PROCESSING": "OrderProcessing",
-            "SHIPPED": "OrderShipped",
-            "DELIVERED": "OrderDelivered"
+
+            "CONFIRMED":
+                "OrderConfirmed",
+
+            "PROCESSING":
+                "OrderProcessing",
+
+            "SHIPPED":
+                "OrderShipped",
+
+            "DELIVERED":
+                "OrderDelivered"
         }
 
-        event_type = status_event_map.get(new_status)
+        event_type = status_event_map.get(
+            new_status
+        )
 
         if event_type:
+
             publish_order_event(
                 event_type,
                 {
                     "order_id": order_id,
                     "customer_id": order["customer_id"],
-                    "customer_email": order["customer_email"],
+                    "customer_email":
+                        order["customer_email"],
                     "old_status": old_status,
                     "new_status": new_status
                 }
@@ -1193,8 +1396,7 @@ def update_order(event, order_id):
         )
 
         # ----------------------------------------------------
-        # If confirmation processing failed,
-        # send the failed order to the ONE SQS failure queue.
+        # Confirmation failure -> SQS failure queue
         # ----------------------------------------------------
 
         if new_status == "CONFIRMED":
@@ -1228,7 +1430,10 @@ def update_order_items(event, order_id):
     # ORDER AUTHORIZATION
     # --------------------------------------------------------
 
-    if not authorize_order(event, order_id):
+    if not authorize_order(
+        event,
+        order_id
+    ):
 
         return response(
             403,
@@ -1239,13 +1444,20 @@ def update_order_items(event, order_id):
             }
         )
 
+    # --------------------------------------------------------
+    # Parse body
+    # --------------------------------------------------------
+
     try:
 
-        body = json.loads(
-            event.get("body") or "{}"
-        )
+        body = parse_request_body(event)
 
-    except json.JSONDecodeError:
+    except (json.JSONDecodeError, TypeError, ValueError) as error:
+
+        print(
+            "Update order items body parsing error:",
+            str(error)
+        )
 
         return response(
             400,
@@ -1261,7 +1473,8 @@ def update_order_items(event, order_id):
         return response(
             400,
             {
-                "message": "items must be a non-empty array"
+                "message":
+                "items must be a non-empty array"
             }
         )
 
@@ -1270,6 +1483,10 @@ def update_order_items(event, order_id):
     try:
 
         with connection.cursor() as cursor:
+
+            # =================================================
+            # LOCK ORDER
+            # =================================================
 
             cursor.execute(
                 """
@@ -1298,6 +1515,10 @@ def update_order_items(event, order_id):
                     }
                 )
 
+            # =================================================
+            # ONLY CREATED ORDERS CAN CHANGE ITEMS
+            # =================================================
+
             if order["status"] != "CREATED":
 
                 return response(
@@ -1310,9 +1531,26 @@ def update_order_items(event, order_id):
                 )
 
             new_items = []
+
             total_amount = Decimal("0.00")
 
-            for item in items:
+            # =================================================
+            # VALIDATE NEW ITEMS
+            # =================================================
+
+            for item_index, item in enumerate(items):
+
+                if not isinstance(item, dict):
+
+                    connection.rollback()
+
+                    return response(
+                        422,
+                        {
+                            "message":
+                            f"Invalid item at index {item_index}"
+                        }
+                    )
 
                 product_id = item.get("product_id")
                 quantity = item.get("quantity")
@@ -1336,6 +1574,10 @@ def update_order_items(event, order_id):
                             "Invalid product_id or quantity"
                         }
                     )
+
+                # ------------------------------------------------
+                # Get product
+                # ------------------------------------------------
 
                 cursor.execute(
                     """
@@ -1393,7 +1635,10 @@ def update_order_items(event, order_id):
                     )
 
                 unit_price = product["price"]
-                total_amount += unit_price * quantity
+
+                total_amount += (
+                    unit_price * quantity
+                )
 
                 new_items.append(
                     {
@@ -1402,6 +1647,10 @@ def update_order_items(event, order_id):
                         "unit_price": unit_price
                     }
                 )
+
+            # =================================================
+            # GET OLD ITEMS
+            # =================================================
 
             cursor.execute(
                 """
@@ -1421,6 +1670,10 @@ def update_order_items(event, order_id):
 
             old_items = cursor.fetchall()
 
+            # =================================================
+            # DELETE OLD ITEMS
+            # =================================================
+
             cursor.execute(
                 """
                 DELETE FROM order_items
@@ -1428,6 +1681,10 @@ def update_order_items(event, order_id):
                 """,
                 (order_id,)
             )
+
+            # =================================================
+            # INSERT NEW ITEMS
+            # =================================================
 
             for item in new_items:
 
@@ -1456,6 +1713,10 @@ def update_order_items(event, order_id):
                     )
                 )
 
+            # =================================================
+            # UPDATE TOTAL
+            # =================================================
+
             cursor.execute(
                 """
                 UPDATE orders
@@ -1470,20 +1731,33 @@ def update_order_items(event, order_id):
                 )
             )
 
+        # =====================================================
+        # COMMIT
+        # =====================================================
+
         connection.commit()
+
+        # =====================================================
+        # EVENTBRIDGE
+        # =====================================================
 
         publish_order_event(
             "OrderItemChanged",
             {
                 "order_id": order_id,
                 "customer_id": order["customer_id"],
-                "customer_email": order["customer_email"],
+                "customer_email":
+                    order["customer_email"],
                 "status": order["status"],
                 "old_items": old_items,
                 "new_items": new_items,
                 "total_amount": total_amount
             }
         )
+
+        # =====================================================
+        # RESPONSE
+        # =====================================================
 
         return response(
             200,
@@ -1523,11 +1797,14 @@ def update_order_items(event, order_id):
 
 def cancel_order(event, order_id):
 
-# --------------------------------------------------------
+    # --------------------------------------------------------
     # ORDER AUTHORIZATION
     # --------------------------------------------------------
 
-    if not authorize_order(event, order_id):
+    if not authorize_order(
+        event,
+        order_id
+    ):
 
         return response(
             403,
@@ -1537,32 +1814,20 @@ def cancel_order(event, order_id):
             }
         )
 
+    # --------------------------------------------------------
+    # Parse body
+    # --------------------------------------------------------
+
     try:
 
-        raw_body = event.get("body")
+        body = parse_request_body(event)
 
-        if not raw_body:
-            body = {}
+    except (json.JSONDecodeError, TypeError, ValueError) as error:
 
-        elif isinstance(raw_body, str):
-            body = json.loads(raw_body)
-
-            # Handle double-encoded JSON
-            if isinstance(body, str):
-                body = json.loads(body)
-
-        else:
-            body = raw_body
-
-        if not isinstance(body, dict):
-            return response(
-                400,
-                {
-                    "message": "Invalid JSON request body"
-                }
-            )
-
-    except (json.JSONDecodeError, TypeError):
+        print(
+            "Cancel order body parsing error:",
+            str(error)
+        )
 
         return response(
             400,
@@ -1582,9 +1847,9 @@ def cancel_order(event, order_id):
 
         with connection.cursor() as cursor:
 
-            # ------------------------------------------------
-            # Lock order
-            # ------------------------------------------------
+            # =================================================
+            # LOCK ORDER
+            # =================================================
 
             cursor.execute(
                 """
@@ -1613,13 +1878,25 @@ def cancel_order(event, order_id):
                 )
 
             old_status = order["status"]
-            if old_status=="CANCELLED":
+
+            # ------------------------------------------------
+            # Already cancelled
+            # ------------------------------------------------
+
+            if old_status == "CANCELLED":
+
                 return response(
                     409,
                     {
-                        "message": "Order is already cancelled"
+                        "message":
+                        "Order is already cancelled"
                     }
                 )
+
+            # ------------------------------------------------
+            # Check cancellable statuses
+            # ------------------------------------------------
+
             if old_status not in {
                 "CREATED",
                 "CONFIRMED",
@@ -1635,12 +1912,12 @@ def cancel_order(event, order_id):
                     }
                 )
 
-            # ------------------------------------------------
-            # Restore inventory
+            # =================================================
+            # RESTORE INVENTORY
             #
-            # Only orders that have been confirmed/processed
-            # should have inventory deducted.
-            # ------------------------------------------------
+            # Only CONFIRMED / PROCESSING orders have had
+            # inventory deducted.
+            # =================================================
 
             if old_status in {
                 "CONFIRMED",
@@ -1654,6 +1931,7 @@ def cancel_order(event, order_id):
                         quantity
                     FROM order_items
                     WHERE order_id = %s
+                    FOR UPDATE
                     """,
                     (order_id,)
                 )
@@ -1676,9 +1954,9 @@ def cancel_order(event, order_id):
                         )
                     )
 
-            # ------------------------------------------------
-            # Update order
-            # ------------------------------------------------
+            # =================================================
+            # UPDATE ORDER
+            # =================================================
 
             cursor.execute(
                 """
@@ -1691,9 +1969,9 @@ def cancel_order(event, order_id):
                 (order_id,)
             )
 
-            # ------------------------------------------------
-            # Add history
-            # ------------------------------------------------
+            # =================================================
+            # ORDER HISTORY
+            # =================================================
 
             cursor.execute(
                 """
@@ -1720,14 +1998,23 @@ def cancel_order(event, order_id):
                 )
             )
 
+        # =====================================================
+        # COMMIT
+        # =====================================================
+
         connection.commit()
+
+        # =====================================================
+        # EVENTBRIDGE
+        # =====================================================
 
         publish_order_event(
             "OrderCancelled",
             {
                 "order_id": order_id,
                 "customer_id": order["customer_id"],
-                "customer_email": order["customer_email"],
+                "customer_email":
+                    order["customer_email"],
                 "old_status": old_status,
                 "new_status": "CANCELLED",
                 "reason": reason
@@ -1772,6 +2059,10 @@ def lambda_handler(event, context):
 
     print("Order Lambda started")
 
+    # ========================================================
+    # HTTP METHOD
+    # ========================================================
+
     method = (
         event.get("httpMethod")
         or
@@ -1780,19 +2071,30 @@ def lambda_handler(event, context):
         .get("method")
     )
 
-    path = event.get("rawPath") or event.get("path", "")
+    # ========================================================
+    # PATH
+    # ========================================================
+
+    path = (
+        event.get("rawPath")
+        or
+        event.get("path", "")
+    )
+
+    # ========================================================
+    # ORDER ID
+    # ========================================================
 
     order_id = get_path_parameter(
         event,
         "orderId"
     )
 
-    # --------------------------------------------------------
-    # Query-string customerId
+    # ========================================================
+    # CUSTOMER ID FROM QUERY STRING
     #
-    # Required API:
     # GET /orders?customerId=X
-    # --------------------------------------------------------
+    # ========================================================
 
     customer_id_value = get_query_parameter(
         event,
@@ -1805,7 +2107,9 @@ def lambda_handler(event, context):
 
         try:
 
-            customer_id = int(customer_id_value)
+            customer_id = int(
+                customer_id_value
+            )
 
             if customer_id <= 0:
                 raise ValueError
@@ -1815,24 +2119,48 @@ def lambda_handler(event, context):
             return response(
                 400,
                 {
-                    "message": "Invalid customerId"
+                    "message":
+                    "Invalid customerId"
                 }
             )
 
-    print("HTTP method:", method)
-    print("Path:", path)
-    print("Order ID:", order_id)
-    print("Customer ID:", customer_id)
+    # ========================================================
+    # LOG REQUEST INFORMATION
+    # ========================================================
+
     print(
-    "Authorizer context:",
-    get_authorizer_context(event)
+        "HTTP method:",
+        method
+    )
+
+    print(
+        "Path:",
+        path
+    )
+
+    print(
+        "Order ID:",
+        order_id
+    )
+
+    print(
+        "Customer ID:",
+        customer_id
+    )
+
+    print(
+        "Authorizer context:",
+        get_authorizer_context(event)
     )
 
     # ========================================================
     # POST /orders
     # ========================================================
 
-    if method == "POST" and path.endswith("/orders"):
+    if (
+        method == "POST"
+        and path.endswith("/orders")
+    ):
 
         return create_order(event)
 
@@ -1845,7 +2173,10 @@ def lambda_handler(event, context):
         and order_id is not None
     ):
 
-        return get_order(event, order_id)
+        return get_order(
+            event,
+            order_id
+        )
 
     # ========================================================
     # GET /orders?customerId=X
@@ -1857,7 +2188,10 @@ def lambda_handler(event, context):
         and customer_id is not None
     ):
 
-        return get_customer_orders(event, customer_id)
+        return get_customer_orders(
+            event,
+            customer_id
+        )
 
     # ========================================================
     # PUT /orders/{orderId}
@@ -1874,22 +2208,12 @@ def lambda_handler(event, context):
         )
 
     # ========================================================
-    # PATCH /orders/{orderId}
-    # ========================================================
-
-    if (
-        method == "PATCH"
-        and order_id is not None
-        and not path.endswith("/cancel")
-    ):
-
-        return update_order_items(
-            event,
-            order_id
-        )
-
-    # ========================================================
     # PATCH /orders/{orderId}/cancel
+    # ========================================================
+    #
+    # IMPORTANT:
+    # Check /cancel BEFORE generic PATCH.
+    #
     # ========================================================
 
     if (
@@ -1904,12 +2228,27 @@ def lambda_handler(event, context):
         )
 
     # ========================================================
+    # PATCH /orders/{orderId}
+    # ========================================================
+
+    if (
+        method == "PATCH"
+        and order_id is not None
+    ):
+
+        return update_order_items(
+            event,
+            order_id
+        )
+
+    # ========================================================
     # UNSUPPORTED REQUEST
     # ========================================================
 
     return response(
         400,
         {
-            "message": "Unsupported API request"
+            "message":
+            "Unsupported API request"
         }
     )
