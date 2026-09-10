@@ -1,3 +1,23 @@
+# Parameters
+# Resources
+# PyMySQL Lambda Layer
+# Lambda Authorizer
+# Product Lambda
+# Customer Lambda
+# Login Lambda
+# Database Initialization Lambda
+# Order Lambda
+# Notification Lambda
+# Order Failure SQS Queue
+# API Gateway HTTP API
+# API Gateway → Authorizer Lambda Permission
+# SNS Low-Stock Topic
+# SNS Email Subscription
+# EventBridge Low-Stock Rule
+# EventBridge → SNS Permission
+# EventBridge Order Rules
+# EventBridge Order Rule → Notification Lambda Permissions
+# Outputs
 AWSTemplateFormatVersion: '2010-09-09'
 
 Transform:
@@ -46,7 +66,6 @@ Resources:
 #with this layer multiple lambdas  can reuse the package of code or dependencies
   PyMySQLLayer:
     Type: AWS::Serverless::LayerVersion
-
     Properties:
       LayerName: !Sub cloudmart-${Environment}-pymysql
 
@@ -648,10 +667,39 @@ Resources:
         Fn::ImportValue:
           !Sub CloudMart-${Environment}-NotificationLambdaRoleArn
 
+      Layers:
+        - !Ref PyMySQLLayer
+
+      VpcConfig:
+
+        SecurityGroupIds:
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-LambdaSecurityGroupId
+
+        SubnetIds:
+
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-PrivateSubnet1Id
+
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-PrivateSubnet2Id
+
       Environment:
         Variables:
 
-          SENDER_EMAIL: !Ref SenderEmail
+          SENDER_EMAIL:
+            !Ref SenderEmail
+
+          RDS_HOST:
+            Fn::ImportValue:
+              !Sub CloudMart-${Environment}-RDSEndpoint
+
+          DB_NAME: cloudmart
+
+          DB_USER: admin
+
+          DB_PASSWORD_PARAMETER:
+            !Sub /cloudmart/${Environment}/db/password
 
   # ==========================================================
   # ORDER FAILURE SQS QUEUE

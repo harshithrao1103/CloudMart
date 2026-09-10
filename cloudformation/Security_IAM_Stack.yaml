@@ -446,7 +446,6 @@ Resources:
         - Key: Environment
           Value: !Ref Environment
 
-
   # ==========================================================
   # Notification Lambda Role
   # ==========================================================
@@ -478,6 +477,23 @@ Resources:
                   - logs:CreateLogGroup
                   - logs:CreateLogStream
                   - logs:PutLogEvents
+                Resource: '*'
+
+              # SSM database password
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/cloudmart/${Environment}/db/password
+
+              # Lambda VPC networking
+              - Effect: Allow
+                Action:
+                  - ec2:CreateNetworkInterface
+                  - ec2:DescribeNetworkInterfaces
+                  - ec2:DescribeSubnets
+                  - ec2:DeleteNetworkInterface
+                  - ec2:AssignPrivateIpAddresses
+                  - ec2:UnassignPrivateIpAddresses
                 Resource: '*'
 
               # Amazon SES
