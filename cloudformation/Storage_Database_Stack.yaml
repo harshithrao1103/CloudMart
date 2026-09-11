@@ -38,8 +38,54 @@ Parameters:
     MinLength: 16
     Description: CloudMart API authentication token
 
+  JWTSecret:
+    Type: String
+    NoEcho: true
+    MinLength: 16
+    Description: CloudMart JWT secret
+
 
 Resources:
+
+  # ==================================================
+  # SSM PARAMETERS
+  # ==================================================
+
+  DBPasswordParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /cloudmart/${Environment}/db/password
+      Type: SecureString
+      Value: !Ref DBPassword
+      Description: !Sub CloudMart ${Environment} RDS database password
+      Tags:
+        Project: CloudMart
+        Environment: !Ref Environment
+
+
+  AuthTokenParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /cloudmart/${Environment}/auth/token
+      Type: SecureString
+      Value: !Ref AuthToken
+      Description: !Sub CloudMart ${Environment} API authentication token
+      Tags:
+        Project: CloudMart
+        Environment: !Ref Environment
+
+
+  JWTSecretParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /cloudmart/${Environment}/auth/jwt-secret
+      Type: SecureString
+      Value: !Ref JWTSecret
+      Description: !Sub CloudMart ${Environment} JWT secret
+      Tags:
+        Project: CloudMart
+        Environment: !Ref Environment
+
 
   # ==================================================
   # RDS DB SUBNET GROUP

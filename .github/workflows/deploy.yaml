@@ -80,6 +80,7 @@ jobs:
             --template-file cloudformation/Security_IAM_Stack.yaml \
             --parameter-overrides \
               Environment=dev \
+              SenderEmail="${{ secrets.SENDER_EMAIL }}" \
             --capabilities CAPABILITY_NAMED_IAM
 
 
@@ -118,30 +119,6 @@ jobs:
         run: aws sts get-caller-identity
 
       # ------------------------------------------------
-      # Create SSM SecureString parameters
-      # ------------------------------------------------
-
-      - name: Create SSM SecureString Parameters
-        run: |
-          aws ssm put-parameter \
-            --name "/cloudmart/dev/db/password" \
-            --value "${{ secrets.DB_PASSWORD }}" \
-            --type SecureString \
-            --overwrite
-
-          aws ssm put-parameter \
-            --name "/cloudmart/dev/auth/token" \
-            --value "${{ secrets.AUTH_TOKEN }}" \
-            --type SecureString \
-            --overwrite
-
-          aws ssm put-parameter \
-            --name "/cloudmart/dev/auth/jwt-secret" \
-            --value "${{ secrets.JWT_SECRET }}" \
-            --type SecureString \
-            --overwrite
-
-      # ------------------------------------------------
       # Validate Data Storage Stack
       # ------------------------------------------------
 
@@ -165,6 +142,7 @@ jobs:
               DBUsername=admin \
               DBPassword="${{ secrets.DB_PASSWORD }}" \
               AuthToken="${{ secrets.AUTH_TOKEN }}" \
+              JWTSecret="${{ secrets.JWT_SECRET }}" \
             --capabilities CAPABILITY_NAMED_IAM
 
 
