@@ -130,9 +130,7 @@ Resources:
 
       # Password is stored in SSM Parameter Store
       # as a SecureString and retrieved securely.
-      MasterUserPassword: !Sub
-        - '{{resolve:ssm-secure:${PasswordParameterName}}}'
-        - PasswordParameterName: !Sub /cloudmart/${Environment}/db/password
+      MasterUserPassword: !Ref DBPassword
 
       DBInstanceClass: db.t3.micro
 
