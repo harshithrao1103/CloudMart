@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>CloudMart | Admin Login</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #2563eb 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Background decoration */
+
+        .circle {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .circle.one {
+            width: 420px;
+            height: 420px;
+            top: -180px;
+            left: -120px;
+        }
+
+        .circle.two {
+            width: 500px;
+            height: 500px;
+            bottom: -250px;
+            right: -150px;
+        }
+
+        .circle.three {
+            width: 180px;
+            height: 180px;
+            top: 15%;
+            right: 12%;
+        }
+
+        /* Main container */
+
+        .login-wrapper {
+            width: 900px;
+            max-width: 92%;
+            min-height: 520px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            background: rgba(255, 255, 255, 0.96);
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.3);
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Left side */
+
+        .welcome-section {
+            background: linear-gradient(160deg, #1d4ed8, #1e40af);
+            color: white;
+            padding: 55px 45px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .welcome-section::after {
+            content: "";
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            border: 45px solid rgba(255, 255, 255, 0.06);
+            right: -130px;
+            bottom: -120px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 35px;
+        }
+
+        .brand-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: white;
+            color: #1d4ed8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 23px;
+            font-weight: bold;
+        }
+
+        .brand-name {
+            font-size: 25px;
+            font-weight: 700;
+        }
+
+        .welcome-section h1 {
+            font-size: 38px;
+            line-height: 1.15;
+            margin-bottom: 18px;
+        }
+
+        .welcome-section p {
+            font-size: 16px;
+            line-height: 1.7;
+            color: rgba(255, 255, 255, 0.82);
+            max-width: 340px;
+        }
+
+        .features {
+            margin-top: 35px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .feature {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .check {
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+        }
+
+        /* Right side */
+
+        .login-section {
+            padding: 55px 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background: white;
+        }
+
+        .login-section h2 {
+            font-size: 28px;
+            color: #111827;
+            margin-bottom: 8px;
+        }
+
+        .login-description {
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 32px;
+        }
+
+        .form-group {
+            margin-bottom: 22px;
+        }
+
+        label {
+            display: block;
+            color: #374151;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 9px;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9ca3af;
+            font-size: 17px;
+        }
+
+        input {
+            width: 100%;
+            height: 50px;
+            padding: 0 15px 0 43px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            outline: none;
+            font-size: 14px;
+            color: #111827;
+            transition: all 0.2s ease;
+        }
+
+        input:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+        }
+
+        input::placeholder {
+            color: #9ca3af;
+        }
+
+        .login-button {
+            width: 100%;
+            height: 50px;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: white;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 6px 15px rgba(37, 99, 235, 0.25);
+        }
+
+        .login-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 9px 20px rgba(37, 99, 235, 0.3);
+        }
+
+        .login-button:active {
+            transform: translateY(0);
+        }
+
+        .security-note {
+            margin-top: 25px;
+            padding: 12px 14px;
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 9px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            color: #6b7280;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .lock {
+            font-size: 16px;
+        }
+
+        .error {
+            background: #fef2f2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+            padding: 11px 13px;
+            border-radius: 9px;
+            margin-bottom: 20px;
+            font-size: 13px;
+        }
+
+        .footer {
+            margin-top: 28px;
+            text-align: center;
+            color: #9ca3af;
+            font-size: 12px;
+        }
+
+        /* Mobile */
+
+        @media (max-width: 700px) {
+            body {
+                padding: 25px 0;
+                overflow-y: auto;
+            }
+
+            .login-wrapper {
+                grid-template-columns: 1fr;
+                min-height: auto;
+            }
+
+            .welcome-section {
+                padding: 35px 30px;
+            }
+
+            .welcome-section h1 {
+                font-size: 30px;
+            }
+
+            .features {
+                margin-top: 25px;
+            }
+
+            .login-section {
+                padding: 40px 30px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="circle one"></div>
+    <div class="circle two"></div>
+    <div class="circle three"></div>
+
+    <div class="login-wrapper">
+
+        <!-- Left side -->
+        <div class="welcome-section">
+
+            <div class="brand">
+                <div class="brand-icon">C</div>
+                <div class="brand-name">CloudMart</div>
+            </div>
+
+            <h1>Welcome to the Admin Dashboard</h1>
+
+            <p>
+                Manage products, monitor orders, and access your
+                daily business reports from one secure dashboard.
+            </p>
+
+            <div class="features">
+
+                <div class="feature">
+                    <div class="check">✓</div>
+                    <span>Product & inventory management</span>
+                </div>
+
+                <div class="feature">
+                    <div class="check">✓</div>
+                    <span>Recent order monitoring</span>
+                </div>
+
+                <div class="feature">
+                    <div class="check">✓</div>
+                    <span>Daily revenue reports</span>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Right side -->
+        <div class="login-section">
+
+            <h2>Admin Login</h2>
+
+            <p class="login-description">
+                Enter your administrator token to continue.
+            </p>
+
+            {% if error %}
+                <div class="error">
+                    {{ error }}
+                </div>
+            {% endif %}
+
+            <form method="POST">
+
+                <div class="form-group">
+
+                    <label for="token">
+                        Admin Token
+                    </label>
+
+                    <div class="input-wrapper">
+
+                        <span class="input-icon">🔐</span>
+
+                        <input
+                            type="password"
+                            id="token"
+                            name="token"
+                            placeholder="Enter your admin token"
+                            autocomplete="off"
+                            required
+                        >
+
+                    </div>
+
+                </div>
+
+                <button type="submit" class="login-button">
+                    Sign In to Dashboard
+                </button>
+
+            </form>
+
+            <div class="security-note">
+                <span class="lock">🔒</span>
+                <span>
+                    Your admin token is transmitted securely and is
+                    required to access CloudMart management features.
+                </span>
+            </div>
+
+            <div class="footer">
+                CloudMart Admin Portal
+            </div>
+
+        </div>
+
+    </div>
+
+</body>
+</html>

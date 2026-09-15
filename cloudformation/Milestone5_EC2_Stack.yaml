@@ -1,0 +1,69 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: >
+  CloudMart Milestone 5 EC2 Dashboard Stack.
+
+Parameters:
+
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - test
+      - prod
+    Description: CloudMart environment name
+
+Resources:
+
+  # ==========================================================
+  # Milestone 5 Dashboard EC2
+  # ==========================================================
+
+  DashboardEC2:
+    Type: AWS::EC2::Instance
+
+    Properties:
+
+      InstanceType: t3.micro
+
+      ImageId: !Sub '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64}}'
+
+      IamInstanceProfile:
+        Fn::ImportValue:
+          !Sub CloudMart-${Environment}-DashboardEC2InstanceProfileName
+
+      SubnetId:
+        Fn::ImportValue:
+          !Sub CloudMart-${Environment}-PublicSubnetId
+
+      SecurityGroupIds:
+        - Fn::ImportValue:
+            !Sub CloudMart-${Environment}-EC2SecurityGroupId
+
+      Tags:
+        - Key: Name
+          Value: !Sub CloudMart-${Environment}-Dashboard
+
+        - Key: Environment
+          Value: !Ref Environment
+
+
+# ============================================================
+# OUTPUTS
+# ============================================================
+
+Outputs:
+
+  DashboardEC2InstanceId:
+    Description: Milestone 5 Dashboard EC2 Instance ID
+    Value: !Ref DashboardEC2
+    Export:
+      Name: !Sub CloudMart-${Environment}-DashboardEC2InstanceId
+
+
+  DashboardEC2PublicIp:
+    Description: Milestone 5 Dashboard EC2 Public IP
+    Value: !GetAtt DashboardEC2.PublicIp
+    Export:
+      Name: !Sub CloudMart-${Environment}-DashboardEC2PublicIp

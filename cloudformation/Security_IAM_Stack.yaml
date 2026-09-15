@@ -548,6 +548,11 @@ Resources:
           ToPort: 443
           SourceSecurityGroupId: !Ref LambdaSecurityGroup
 
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          SourceSecurityGroupId: !Ref EC2SecurityGroup
+
       Tags:
 
         - Key: Name
@@ -656,7 +661,195 @@ Resources:
         - Key: Environment
           Value: !Ref Environment
 
+  # ==========================================================
+  # Milestone 5 - EC2 Dashboard Role
+  # ==========================================================
 
+  DashboardEC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub CloudMart-${Environment}-DashboardEC2Role
+
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+
+      Policies:
+
+        - PolicyName: DashboardS3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                Resource: !Sub
+                  - '${ReportsBucketArn}/*'
+                  - ReportsBucketArn:
+                      Fn::ImportValue:
+                        !Sub CloudMart-${Environment}-ReportsBucketArn
+
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource:
+                  Fn::ImportValue:
+                    !Sub CloudMart-${Environment}-ReportsBucketArn
+
+
+  DashboardEC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub CloudMart-${Environment}-DashboardEC2InstanceProfile
+      Roles:
+        - !Ref DashboardEC2Role
+
+  # ==========================================================
+  # Milestone 5 - Dashboard Lambda Role
+  # ==========================================================
+
+  DashboardLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub CloudMart-${Environment}-DashboardLambdaRole
+
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+
+      Policies:
+
+        - PolicyName: DashboardLambdaLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:*
+
+        - PolicyName: DashboardLambdaSSM
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/cloudmart/${Environment}/db/password
+
+        - PolicyName: DashboardLambdaVpcNetworking
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+
+              - Effect: Allow
+                Action:
+                  - ec2:CreateNetworkInterface
+                  - ec2:DescribeNetworkInterfaces
+                  - ec2:DescribeSubnets
+                  - ec2:DeleteNetworkInterface
+                  - ec2:AssignPrivateIpAddresses
+                  - ec2:UnassignPrivateIpAddresses
+                Resource: '*'
+                
+
+
+
+  # ==========================================================
+  # Milestone 5 - Daily Report Lambda Role
+  # ==========================================================
+
+  DailyReportLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub CloudMart-${Environment}-DailyReportLambdaRole
+
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+
+      Policies:
+
+        - PolicyName: DailyReportLambdaLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:*
+
+        - PolicyName: DailyReportLambdaSSM
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/cloudmart/${Environment}/db/password
+
+        - PolicyName: DailyReportS3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                Resource: !Sub
+                  - '${ReportsBucketArn}/daily-report-*'
+                  - ReportsBucketArn:
+                      Fn::ImportValue:
+                        !Sub CloudMart-${Environment}-ReportsBucketArn
+
+        - PolicyName: DailyReportLambdaVpcNetworking
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+
+              - Effect: Allow
+                Action:
+                  - ec2:CreateNetworkInterface
+                  - ec2:DescribeNetworkInterfaces
+                  - ec2:DescribeSubnets
+                  - ec2:DeleteNetworkInterface
+                  - ec2:AssignPrivateIpAddresses
+                  - ec2:UnassignPrivateIpAddresses
+                Resource: '*'
+
+   
+       
 # ============================================================
 # OUTPUTS
 # ============================================================
@@ -759,3 +952,29 @@ Outputs:
     Value: !GetAtt NotificationLambdaRole.Arn
     Export:
       Name: !Sub CloudMart-${Environment}-NotificationLambdaRoleArn
+
+
+  DashboardEC2RoleArn:
+    Description: Milestone 5 EC2 Dashboard IAM Role ARN
+    Value: !GetAtt DashboardEC2Role.Arn
+    Export:
+      Name: !Sub CloudMart-${Environment}-DashboardEC2RoleArn
+
+  DashboardEC2InstanceProfileName:
+    Description: Milestone 5 EC2 Dashboard Instance Profile Name
+    Value: !Ref DashboardEC2InstanceProfile
+    Export:
+      Name: !Sub CloudMart-${Environment}-DashboardEC2InstanceProfileName
+
+  DashboardLambdaRoleArn:
+    Description: Milestone 5 Dashboard Lambda IAM Role ARN
+    Value: !GetAtt DashboardLambdaRole.Arn
+    Export:
+      Name: !Sub CloudMart-${Environment}-DashboardLambdaRoleArn
+
+
+  DailyReportLambdaRoleArn:
+    Description: Milestone 5 Daily Report Lambda IAM Role ARN
+    Value: !GetAtt DailyReportLambdaRole.Arn
+    Export:
+      Name: !Sub CloudMart-${Environment}-DailyReportLambdaRoleArn
