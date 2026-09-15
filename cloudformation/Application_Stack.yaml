@@ -807,7 +807,7 @@ Resources:
             ScheduleExpressionTimezone: "Asia/Kolkata"
             Name: !Sub cloudmart-${Environment}-daily-report-schedule
             Description: Daily CloudMart report generation
-            Enabled: true
+            Enabled: ENABLED
 
 
   # ==========================================================
