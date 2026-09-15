@@ -169,9 +169,13 @@ Resources:
               - Effect: Allow
                 Action:
                   - logs:CreateLogGroup
+                Resource: "*"
+
+              - Effect: Allow
+                Action:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
-                Resource: '*'
+                Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cloudmart-${Environment}-customer:*
 
               # SSM database password
               - Effect: Allow
@@ -288,9 +292,13 @@ Resources:
               - Effect: Allow
                 Action:
                   - logs:CreateLogGroup
+                Resource: "*"
+
+              - Effect: Allow
+                Action:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
-                Resource: '*'
+                Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cloudmart-${Environment}-order:*
 
               # SSM database password
               - Effect: Allow
@@ -357,9 +365,13 @@ Resources:
               - Effect: Allow
                 Action:
                   - logs:CreateLogGroup
+                Resource: "*"
+
+              - Effect: Allow
+                Action:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
-                Resource: '*'
+                Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cloudmart-${Environment}-statistics:*
 
 
   # ==========================================================
@@ -475,10 +487,13 @@ Resources:
               - Effect: Allow
                 Action:
                   - logs:CreateLogGroup
+                Resource: "*"
+
+              - Effect: Allow
+                Action:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
-                Resource: '*'
-
+                Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cloudmart-${Environment}-notification:*
               # SSM database password
               - Effect: Allow
                 Action:
