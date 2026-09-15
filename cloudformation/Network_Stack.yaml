@@ -324,6 +324,31 @@ Resources:
           Value: !Ref Environment
 
 
+  # --------------------------------------------------
+  # S3 Gateway VPC Endpoint
+  # --------------------------------------------------
+
+  S3Endpoint:
+    Type: AWS::EC2::VPCEndpoint
+
+    Properties:
+      VpcId: !Ref CloudMartVPC
+
+      VpcEndpointType: Gateway
+
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.s3
+
+      RouteTableIds:
+        - !Ref PrivateRouteTable
+
+      Tags:
+        - Key: Name
+          Value: !Sub cloudmart-${Environment}-s3-endpoint
+
+        - Key: Environment
+          Value: !Ref Environment
+
+
 # ----------------------------------------------------
 # Outputs
 # ----------------------------------------------------
