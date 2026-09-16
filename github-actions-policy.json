@@ -74,6 +74,21 @@
             ],
             "Resource": "*"
         },
+
+
+        {
+            "Effect": "Allow",
+            "Action": [
+                "scheduler:CreateSchedule",
+                "scheduler:UpdateSchedule",
+                "scheduler:DeleteSchedule",
+                "scheduler:GetSchedule",
+                "scheduler:TagResource",
+                "scheduler:UntagResource"
+            ],
+            "Resource": "*"
+        },
+
         {
             "Effect": "Allow",
             "Action": [
@@ -203,6 +218,28 @@
                 "apigateway:DELETE",
                 "apigateway:TagResource",
                 "apigateway:UntagResource"
+            ],
+            "Resource": "*"
+        }
+        ,
+
+        {
+            "Effect": "Allow",
+            "Action": [
+                "cloudwatch:PutDashboard",
+                "cloudwatch:DeleteDashboards",
+                "cloudwatch:PutMetricAlarm",
+                "cloudwatch:DeleteAlarms",
+                "cloudwatch:DescribeAlarms"
+            ],
+            "Resource": "*"
+        }
+        ,
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ssm:SendCommand",
+                "ssm:GetCommandInvocation"
             ],
             "Resource": "*"
         }

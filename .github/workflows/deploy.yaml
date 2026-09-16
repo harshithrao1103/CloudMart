@@ -286,3 +286,59 @@ jobs:
               Environment=dev \
               NotificationEmail="${{ secrets.NOTIFICATION_EMAIL }}" \
             --no-fail-on-empty-changeset
+
+
+
+  # ==================================================
+  # EC2 DASHBOARD DEPLOYMENT - MILESTONE 5
+  # ==================================================
+
+  deploy-ec2-dashboard:
+    name: Deploy EC2 Dashboard
+    runs-on: ubuntu-latest
+    needs: deploy-monitoring
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ARN_ROLE }}
+          aws-region: us-east-1
+
+      - name: Verify AWS identity
+        run: aws sts get-caller-identity
+
+      - name: Deploy Dashboard to EC2
+        run: |
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids i-0aaf6168396487377 \
+            --document-name "AWS-RunShellScript" \
+            --parameters 'commands=[
+              "mkdir -p /opt/cloudmart-dashboard/templates",
+              "curl -L -o /opt/cloudmart-dashboard/app.py https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/dashboard/app.py",
+              "curl -L -o /opt/cloudmart-dashboard/templates/dashboard.html https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/dashboard/templates/dashboard.html",
+              "curl -L -o /opt/cloudmart-dashboard/templates/login.html https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/dashboard/templates/login.html",
+              "chown -R ec2-user:ec2-user /opt/cloudmart-dashboard",
+              "systemctl restart cloudmart-dashboard",
+              "systemctl restart nginx",
+              "systemctl is-active cloudmart-dashboard",
+              "systemctl is-active nginx"
+            ]' \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "SSM Command ID: $COMMAND_ID"
+
+          aws ssm wait command-executed \
+            --command-id "$COMMAND_ID" \
+            --instance-id i-0aaf6168396487377
+
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id i-0aaf6168396487377 \
+            --query "{Status:Status,Output:StandardOutputContent,Error:StandardErrorContent}" \
+            --output json
