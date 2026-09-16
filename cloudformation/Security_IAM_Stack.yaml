@@ -329,6 +329,12 @@ Resources:
                   - events:PutEvents
                 Resource: !Sub arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:event-bus/default
 
+              # CloudWatch custom metrics
+              - Effect: Allow
+                Action:
+                  - cloudwatch:PutMetricData
+                Resource: '*'
+
               # # SNS order confirmation notification
               # - Effect: Allow
               #   Action:
@@ -848,6 +854,36 @@ Resources:
                   - ec2:UnassignPrivateIpAddresses
                 Resource: '*'
 
+
+
+  LowStockMetricsLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub cloudmart-${Environment}-low-stock-metrics-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: CloudWatchMetricsPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudwatch:PutMetricData
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
    
        
 # ============================================================
@@ -978,3 +1014,11 @@ Outputs:
     Value: !GetAtt DailyReportLambdaRole.Arn
     Export:
       Name: !Sub CloudMart-${Environment}-DailyReportLambdaRoleArn
+
+
+
+  LowStockMetricsLambdaRoleArn:
+    Description: IAM role ARN for LowStockEvents metrics Lambda
+    Value: !GetAtt LowStockMetricsLambdaRole.Arn
+    Export:
+      Name: !Sub CloudMart-${Environment}-LowStockMetricsLambdaRoleArn

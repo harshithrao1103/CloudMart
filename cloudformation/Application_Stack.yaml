@@ -810,6 +810,50 @@ Resources:
             State: ENABLED
 
 
+  LowStockMetricsLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub cloudmart-${Environment}-low-stock-metrics
+      CodeUri: ../lambda/monitoring/
+      Handler: monitoring_lambda.lambda_handler
+      Runtime: python3.12
+      Timeout: 10
+      MemorySize: 128
+      Role:
+        Fn::ImportValue:
+          !Sub CloudMart-${Environment}-LowStockMetricsLambdaRoleArn
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+
+
+
+  LowStockMetricsRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub cloudmart-${Environment}-low-stock-metrics
+      State: ENABLED
+      EventPattern:
+        source:
+          - cloudmart.product
+        detail-type:
+          - Inventory Changed
+        detail:
+          low_stock:
+            - true
+      Targets:
+        - Arn: !GetAtt LowStockMetricsLambda.Arn
+          Id: LowStockMetricsLambdaTarget
+
+  LowStockMetricsLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref LowStockMetricsLambda
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt LowStockMetricsRule.Arn
+
+
   # ==========================================================
   # ORDER FAILURE SQS QUEUE
   # ==========================================================
