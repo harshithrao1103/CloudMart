@@ -1,3 +1,57 @@
+# Imports
+# AWS Service Clients
+# SSM
+# SQS
+# EventBridge
+# Environment Variables
+# RDS
+# SQS
+# EventBridge
+# RDS Database Connection
+# JSON / Decimal / Date Serialization
+# Standard API Response
+# Request Body Parsing
+# Path Parameter Handling
+# Query Parameter Handling
+# Lambda Authorizer Context
+# Authenticated User ID
+# Admin Role Check
+# Customer Authorization
+# Order Ownership Authorization
+# SQS Failure Handling
+# EventBridge Order Events
+# Create Order
+# Validate customer
+# Validate products/items
+# Check inventory
+# Calculate total
+# Insert order
+# Insert order items
+# Insert order history
+# Commit transaction
+# Publish OrderCreated
+# Get Particular Order
+# Get Customer Orders
+# Update Order Status — Admin
+# Validate status
+# Validate status transition
+# Check inventory
+# Deduct inventory
+# Update order
+# Insert history
+# Publish lifecycle event
+# Update Order Items
+# Cancel Order
+# Validate cancellation
+# Restore inventory
+# Update status
+# Insert history
+# Publish OrderCancelled
+# Transaction Handling
+# commit
+# rollback
+# Main Lambda Handler
+# API Route Handling
 import json
 import os
 import boto3
@@ -13,6 +67,25 @@ from datetime import datetime
 ssm = boto3.client("ssm")
 sqs = boto3.client("sqs")
 events = boto3.client("events")
+cloudwatch = boto3.client("cloudwatch")
+
+def publish_metric(metric_name):
+    cloudwatch.put_metric_data(
+        Namespace="CloudMart/Operations",
+        MetricData=[
+            {
+                "MetricName": metric_name,
+                "Value": 1,
+                "Unit": "Count",
+                "Dimensions": [
+                    {
+                        "Name": "Environment",
+                        "Value": os.environ.get("ENVIRONMENT", "dev")
+                    }
+                ]
+            }
+        ]
+    )
 
 
 # ============================================================
@@ -178,6 +251,7 @@ def get_path_parameter(event, name):
 # ============================================================
 # QUERY STRING PARAMETER
 # ============================================================
+#GET /orders?customerId=11 ,customerId=11 is a query parameter.
 
 def get_query_parameter(event, name):
 
@@ -431,7 +505,7 @@ def publish_order_event(detail_type, detail):
 
 def create_order(event):
 
-    # --------------------------------------------------------
+    # --------------------- -----------------------------------
     # Parse request body
     # --------------------------------------------------------
 
@@ -787,6 +861,7 @@ def create_order(event):
                 "items": order_items
             }
         )
+        publish_metric("OrdersPlaced")
 
         # =====================================================
         # RESPONSE
@@ -811,6 +886,8 @@ def create_order(event):
             "Create order error:",
             str(error)
         )
+
+        publish_metric("OrdersFailed")
 
         return response(
             500,

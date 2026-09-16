@@ -1,1 +1,237 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudMart Milestone 5 Monitoring Stack.
 
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - test
+      - prod
+
+  NotificationEmail:
+    Type: String
+    Description: Email address for CloudWatch alarm notifications
+
+Resources:
+
+  MonitoringTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub cloudmart-${Environment}-monitoring
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+
+
+  MonitoringEmailSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref MonitoringTopic
+      Protocol: email
+      Endpoint: !Ref NotificationEmail
+
+
+  LowStockEventsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub cloudmart-${Environment}-low-stock-events
+      AlarmDescription: Alarm when more than 5 low-stock events occur within 5 minutes
+      Namespace: CloudMart/Operations
+      MetricName: LowStockEvents
+      Dimensions:
+        - Name: Environment
+          Value: !Ref Environment
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 5
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref MonitoringTopic
+
+
+  OrdersFailedAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub cloudmart-${Environment}-orders-failed
+      AlarmDescription: Alarm when one or more orders fail within 5 minutes
+      Namespace: CloudMart/Operations
+      MetricName: OrdersFailed
+      Dimensions:
+        - Name: Environment
+          Value: !Ref Environment
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref MonitoringTopic
+
+  OrderLambdaErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub cloudmart-${Environment}-order-lambda-errors
+      AlarmDescription: Alarm when the Order Lambda has execution errors
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Sub cloudmart-${Environment}-order
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref MonitoringTopic
+
+
+  RDSCPUAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub cloudmart-${Environment}-rds-cpu
+      AlarmDescription: Alarm when RDS CPU utilization is high
+      Namespace: AWS/RDS
+      MetricName: CPUUtilization
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: cloudmart-dev-mysql
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 80
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref MonitoringTopic
+
+
+  OperationsDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: !Sub cloudmart-operations
+      DashboardBody: !Sub |
+        {
+          "widgets": [
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "title": "Orders Placed",
+                "view": "timeSeries",
+                "region": "${AWS::Region}",
+                "metrics": [
+                  [
+                    "CloudMart/Operations",
+                    "OrdersPlaced",
+                    "Environment",
+                    "${Environment}"
+                  ]
+                ],
+                "stat": "Sum",
+                "period": 300
+              }
+            }
+            ,
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 0,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "title": "Orders Failed",
+                "view": "timeSeries",
+                "region": "${AWS::Region}",
+                "metrics": [
+                  [
+                    "CloudMart/Operations",
+                    "OrdersFailed",
+                    "Environment",
+                    "${Environment}"
+                  ]
+                ],
+                "stat": "Sum",
+                "period": 300
+              }
+            }
+            ,
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 6,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "title": "Low Stock Events",
+                "view": "timeSeries",
+                "region": "${AWS::Region}",
+                "metrics": [
+                  [
+                    "CloudMart/Operations",
+                    "LowStockEvents",
+                    "Environment",
+                    "${Environment}"
+                  ]
+                ],
+                "stat": "Sum",
+                "period": 300
+              }
+            }
+            ,
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 6,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "title": "Order Lambda Errors",
+                "view": "timeSeries",
+                "region": "${AWS::Region}",
+                "metrics": [
+                  [
+                    "AWS/Lambda",
+                    "Errors",
+                    "FunctionName",
+                    "cloudmart-${Environment}-order"
+                  ]
+                ],
+                "stat": "Sum",
+                "period": 300
+              }
+            }
+            ,
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 12,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "title": "RDS CPU Utilization",
+                "view": "timeSeries",
+                "region": "${AWS::Region}",
+                "metrics": [
+                  [
+                    "AWS/RDS",
+                    "CPUUtilization",
+                    "DBInstanceIdentifier",
+                    "cloudmart-dev-mysql"
+                  ]
+                ],
+                "stat": "Average",
+                "period": 300
+              }
+            }
+          ]
+        }
