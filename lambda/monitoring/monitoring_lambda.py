@@ -6,12 +6,12 @@ cloudwatch = boto3.client("cloudwatch")
 ENVIRONMENT = os.environ.get("ENVIRONMENT", "dev")
 
 
-def lambda_handler(event, context):
+def publish_metric(metric_name):
     cloudwatch.put_metric_data(
         Namespace="CloudMart/Operations",
         MetricData=[
             {
-                "MetricName": "LowStockEvents",
+                "MetricName": metric_name,
                 "Value": 1,
                 "Unit": "Count",
                 "Dimensions": [
@@ -24,7 +24,31 @@ def lambda_handler(event, context):
         ]
     )
 
+
+def lambda_handler(event, context):
+
+    detail_type = event.get("detail-type")
+
+    if detail_type == "OrderCreated":
+        publish_metric("OrdersPlaced")
+
+        return {
+            "statusCode": 200,
+            "message": "OrdersPlaced metric published"
+        }
+
+    if detail_type == "Inventory Changed":
+        detail = event.get("detail", {})
+
+        if detail.get("low_stock") is True:
+            publish_metric("LowStockEvents")
+
+            return {
+                "statusCode": 200,
+                "message": "LowStockEvents metric published"
+            }
+
     return {
         "statusCode": 200,
-        "message": "LowStockEvents metric published"
+        "message": "No monitoring metric required"
     }

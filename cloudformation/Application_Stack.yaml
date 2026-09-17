@@ -854,6 +854,29 @@ Resources:
       SourceArn: !GetAtt LowStockMetricsRule.Arn
 
 
+  OrdersPlacedMetricsRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub cloudmart-${Environment}-orders-placed-metrics
+      State: ENABLED
+      EventPattern:
+        source:
+          - cloudmart.orders
+        detail-type:
+          - OrderCreated
+      Targets:
+        - Arn: !GetAtt LowStockMetricsLambda.Arn
+          Id: OrdersPlacedMetricsLambdaTarget
+
+  OrdersPlacedMetricsLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref LowStockMetricsLambda
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt OrdersPlacedMetricsRule.Arn
+
+
   # ==========================================================
   # ORDER FAILURE SQS QUEUE
   # ==========================================================

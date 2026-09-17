@@ -861,7 +861,7 @@ def create_order(event):
                 "items": order_items
             }
         )
-        publish_metric("OrdersPlaced")
+        #publish_metric("OrdersPlaced")
 
         # =====================================================
         # RESPONSE
