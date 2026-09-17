@@ -24,7 +24,6 @@ def publish_metric(metric_name):
         ]
     )
 
-
 def lambda_handler(event, context):
 
     detail_type = event.get("detail-type")
@@ -35,6 +34,14 @@ def lambda_handler(event, context):
         return {
             "statusCode": 200,
             "message": "OrdersPlaced metric published"
+        }
+
+    if detail_type == "OrderFailed":
+        publish_metric("OrdersFailed")
+
+        return {
+            "statusCode": 200,
+            "message": "OrdersFailed metric published"
         }
 
     if detail_type == "Inventory Changed":

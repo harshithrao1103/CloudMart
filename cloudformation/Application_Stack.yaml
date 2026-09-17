@@ -877,6 +877,29 @@ Resources:
       SourceArn: !GetAtt OrdersPlacedMetricsRule.Arn
 
 
+  OrdersFailedMetricsRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub cloudmart-${Environment}-orders-failed-metrics
+      State: ENABLED
+      EventPattern:
+        source:
+          - cloudmart.orders
+        detail-type:
+          - OrderFailed
+      Targets:
+        - Arn: !GetAtt LowStockMetricsLambda.Arn
+          Id: OrdersFailedMetricsLambdaTarget
+
+  OrdersFailedMetricsLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref LowStockMetricsLambda
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt OrdersFailedMetricsRule.Arn
+
+
   # ==========================================================
   # ORDER FAILURE SQS QUEUE
   # ==========================================================

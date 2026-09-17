@@ -887,7 +887,14 @@ def create_order(event):
             str(error)
         )
 
-        publish_metric("OrdersFailed")
+        publish_order_event(
+            "OrderFailed",
+            {
+                "order_id": order_id,
+                "customer_id": customer_id,
+                "error": str(error)
+            }
+        )
 
         return response(
             500,
