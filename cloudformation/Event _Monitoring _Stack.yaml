@@ -37,7 +37,7 @@ Resources:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: !Sub cloudmart-${Environment}-low-stock-events
-      AlarmDescription: Alarm when more than 5 low-stock events occur within 5 minutes
+      AlarmDescription: Alarm when more than 0 low-stock events occur within 5 minutes
       Namespace: CloudMart/Operations
       MetricName: LowStockEvents
       Dimensions:
@@ -46,7 +46,7 @@ Resources:
       Statistic: Sum
       Period: 300
       EvaluationPeriods: 1
-      Threshold: 5
+      Threshold: 0
       ComparisonOperator: GreaterThanThreshold
       TreatMissingData: notBreaching
       AlarmActions:
@@ -232,6 +232,6 @@ Resources:
                 "stat": "Average",
                 "period": 300
               }
-            }
+            } 
           ]
         }
