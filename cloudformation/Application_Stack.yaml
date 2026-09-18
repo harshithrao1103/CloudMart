@@ -1041,8 +1041,15 @@ Resources:
               productId: $.detail.product_id
               quantity: $.detail.quantity
               threshold: $.detail.low_stock_threshold
-            InputTemplate: '"CLOUDMART LOW STOCK ALERT\n\nProduct ID: <productId>\nCurrent Inventory: <quantity>\nLow Stock Threshold: <threshold>\n\nStatus: LOW STOCK\n\nThe product inventory has fallen below the configured low-stock threshold.\n\nPlease review the inventory and replenish stock if required.\n\nCloudMart Inventory Monitoring"'
-
+            InputTemplate: |
+              "CLOUDMART LOW STOCK ALERT"
+              "Product ID: <productId>"
+              "Current Inventory: <quantity>"
+              "Low Stock Threshold: <threshold>"
+              "Status: LOW STOCK"
+              "The product inventory has fallen below the configured low-stock threshold."
+              "Please review the inventory and replenish stock if required."
+              "CloudMart Inventory Monitoring"
   # ==========================================================
   # EVENTBRIDGE -> SNS PERMISSION
   # ==========================================================
