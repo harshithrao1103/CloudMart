@@ -39,28 +39,35 @@ def lambda_handler(event, context):
     try:
         with connection.cursor() as cursor:
             cursor.execute("""
-                SELECT
-                    o.created_at,
-                    o.customer_id,
-                    o.order_id,
-                    oi.product_id,
-                    p.name AS product_name,
-                    oi.quantity,
-                    (oi.quantity * oi.unit_price) AS bill
+                SELECT o.created_at,
+                       o.customer_id,
+                       o.order_id,
+                       oi.product_id,
+                       p.name AS product_name,
+                       oi.quantity,
+                       oi.unit_price,
+                       (oi.quantity * oi.unit_price) AS bill
                 FROM orders o
-                JOIN order_items oi
-                    ON o.order_id = oi.order_id
-                JOIN products p
-                    ON oi.product_id = p.product_id
+                JOIN order_items oi ON o.order_id = oi.order_id
+                JOIN products p ON oi.product_id = p.product_id
                 WHERE DATE(o.created_at) = CURDATE()
-                ORDER BY o.created_at, o.order_id
+                ORDER BY o.created_at, o.customer_id, o.order_id
             """)
 
             rows = cursor.fetchall()
 
+        from datetime import date
+
+        today = date.today().isoformat()
+
         output = io.StringIO()
         writer = csv.writer(output)
 
+        writer.writerow(["CLOUDMART DAILY SALES REPORT"])
+        writer.writerow(["Report Date", today])
+        writer.writerow([])
+
+        writer.writerow(["ORDER DETAILS"])
         writer.writerow([
             "Date",
             "Customer ID",
@@ -68,29 +75,48 @@ def lambda_handler(event, context):
             "Product ID",
             "Product Name",
             "Quantity",
+            "Unit Price",
             "Bill"
         ])
 
+        customer_totals = {}
         total_revenue = 0
 
         for row in rows:
             bill = float(row["bill"])
             total_revenue += bill
 
+            customer_id = row["customer_id"]
+
+            if customer_id not in customer_totals:
+                customer_totals[customer_id] = 0
+
+            customer_totals[customer_id] += bill
+
             writer.writerow([
                 row["created_at"].strftime("%Y-%m-%d"),
-                row["customer_id"],
+                customer_id,
                 row["order_id"],
                 row["product_id"],
                 row["product_name"],
                 row["quantity"],
+                float(row["unit_price"]),
                 bill
             ])
 
         writer.writerow([])
-        writer.writerow(["TOTAL REVENUE", "", "", "", "", "", total_revenue])
+        writer.writerow(["CUSTOMER DAILY EXPENDITURE"])
+        writer.writerow(["Customer ID", "Total Expenditure"])
 
-        today = rows[0]["created_at"].strftime("%Y-%m-%d") if rows else __import__("datetime").date.today().isoformat()
+        for customer_id, total in customer_totals.items():
+            writer.writerow([
+                customer_id,
+                round(total, 2)
+            ])
+
+        writer.writerow([])
+        writer.writerow(["TOTAL DAILY REVENUE"])
+        writer.writerow(["Total Revenue", round(total_revenue, 2)])
 
         key = f"daily-report-{today}.csv"
 
