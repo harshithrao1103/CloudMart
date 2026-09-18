@@ -3,6 +3,19 @@ import requests
 import boto3
 from datetime import datetime
 from zoneinfo import ZoneInfo
+IST = ZoneInfo("Asia/Kolkata")
+
+def format_ist_time(value):
+    if not value:
+        return ""
+
+    if isinstance(value, str):
+        value = datetime.fromisoformat(value)
+
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=ZoneInfo("UTC"))
+
+    return value.astimezone(IST).strftime("%Y-%m-%d %H:%M:%S")
 
 app = Flask(__name__)
 
@@ -99,6 +112,10 @@ def dashboard():
         "orders",
         []
     )
+
+    for order in orders:
+        order["created_at"] = format_ist_time(order.get("created_at"))
+
 
     return render_template(
         "dashboard.html",
