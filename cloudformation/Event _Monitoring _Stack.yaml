@@ -1,7 +1,9 @@
 AWSTemplateFormatVersion: '2010-09-09'
+
 Description: CloudMart Milestone 5 Monitoring Stack.
 
 Parameters:
+
   Environment:
     Type: String
     Default: dev
@@ -25,12 +27,44 @@ Resources:
           Value: !Ref Environment
 
 
-  MonitoringEmailSubscription:
+ 
+
+
+  FormattedMonitoringTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub cloudmart-${Environment}-formatted-monitoring
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+
+
+  FormattedMonitoringEmailSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref FormattedMonitoringTopic
+      Protocol: email
+      Endpoint: !Ref NotificationEmail
+
+  AlarmNotificationSubscription:
     Type: AWS::SNS::Subscription
     Properties:
       TopicArn: !Ref MonitoringTopic
-      Protocol: email
-      Endpoint: !Ref NotificationEmail
+      Protocol: lambda
+      Endpoint:
+        Fn::ImportValue:
+          !Sub CloudMart-${Environment}-AlarmNotificationLambdaArn
+
+
+  AlarmNotificationLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Fn::ImportValue:
+          !Sub CloudMart-${Environment}-AlarmNotificationLambdaArn
+      Action: lambda:InvokeFunction
+      Principal: sns.amazonaws.com
+      SourceArn: !Ref MonitoringTopic
 
 
   LowStockEventsAlarm:
@@ -72,6 +106,7 @@ Resources:
       AlarmActions:
         - !Ref MonitoringTopic
 
+
   OrderLambdaErrorsAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
@@ -111,6 +146,7 @@ Resources:
       AlarmActions:
         - !Ref MonitoringTopic
 
+ 
 
   OperationsDashboard:
     Type: AWS::CloudWatch::Dashboard
@@ -140,8 +176,7 @@ Resources:
                 "stat": "Sum",
                 "period": 300
               }
-            }
-            ,
+            },
             {
               "type": "metric",
               "x": 12,
@@ -163,8 +198,7 @@ Resources:
                 "stat": "Sum",
                 "period": 300
               }
-            }
-            ,
+            },
             {
               "type": "metric",
               "x": 0,
@@ -186,8 +220,7 @@ Resources:
                 "stat": "Sum",
                 "period": 300
               }
-            }
-            ,
+            },
             {
               "type": "metric",
               "x": 12,
@@ -209,8 +242,7 @@ Resources:
                 "stat": "Sum",
                 "period": 300
               }
-            }
-            ,
+            },
             {
               "type": "metric",
               "x": 0,
@@ -232,6 +264,16 @@ Resources:
                 "stat": "Average",
                 "period": 300
               }
-            } 
+            }
           ]
         }
+
+
+
+Outputs:
+
+  FormattedMonitoringTopicArn:
+    Description: ARN of the SNS topic used for formatted CloudMart alarm notifications
+    Value: !Ref FormattedMonitoringTopic
+    Export:
+      Name: !Sub CloudMart-${Environment}-FormattedMonitoringTopicArn

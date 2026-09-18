@@ -739,6 +739,24 @@ Resources:
             PayloadFormatVersion: "2.0"
 
 
+  AlarmNotificationLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub cloudmart-${Environment}-alarm-notification
+      CodeUri: ../lambda/alarm_notification/
+      Handler: alarm_notification_lambda.lambda_handler
+      Runtime: python3.12
+      Timeout: 30
+      MemorySize: 128
+      Role:
+        Fn::ImportValue:
+          !Sub CloudMart-${Environment}-DashboardLambdaRoleArn
+      Environment:
+        Variables:
+          MONITORING_TOPIC_ARN:
+            !Sub arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:cloudmart-${Environment}-formatted-monitoring
+
+
   # ==========================================================
   # MILESTONE 5 DAILY REPORT LAMBDA
   # ==========================================================
@@ -1443,3 +1461,13 @@ Outputs:
 
     Export:
       Name: !Sub CloudMart-${Environment}-OrderFailureQueueUrl
+
+
+
+  AlarmNotificationLambdaArn:
+    Description: Milestone 5 Alarm Notification Lambda ARN
+
+    Value: !GetAtt AlarmNotificationLambda.Arn
+
+    Export:
+      Name: !Sub CloudMart-${Environment}-AlarmNotificationLambdaArn
