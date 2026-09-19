@@ -9,6 +9,7 @@ MONITORING_TOPIC_ARN = os.environ["MONITORING_TOPIC_ARN"]
 
 def lambda_handler(event, context):
     message = json.loads(event["Records"][0]["Sns"]["Message"])
+    print("SNS ALARM MESSAGE:", json.dumps(message))
 
     alarm_name = message.get("AlarmName", "")
     new_state = message.get("NewStateValue", "UNKNOWN")
