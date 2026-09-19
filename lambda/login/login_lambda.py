@@ -1,3 +1,14 @@
+# Login Lambda — Main Blocks
+# AWS Client – Connects to SSM.
+# Environment Variables – Gets RDS and SSM paths.
+# Database Connection – Gets password from SSM and connects to RDS.
+# HTTP Response – Creates API responses.
+# Base64URL Encoding – Encodes JWT parts.
+# Password Verification – Checks user password.
+# JWT Secret – Gets secret from SSM.
+# Create JWT – Creates the login token.
+# Login – Finds user, verifies details, and returns JWT.
+# Lambda Handler – Handles POST /login.
 import json
 import os
 import boto3
@@ -334,6 +345,44 @@ def login_user(event):
                     "message": "Invalid email or password"
                 }
             )
+
+
+        # ----------------------------------------------------
+        # Record successful login
+        # ----------------------------------------------------
+
+        ip_address = (
+            event.get("requestContext", {})
+            .get("http", {})
+            .get("sourceIp")
+        )
+
+        user_agent = (
+            event.get("headers", {})
+            .get("user-agent")
+        )
+
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO login_history
+                (
+                    user_id,
+                    ip_address,
+                    user_agent,
+                    login_status
+                )
+                VALUES (%s, %s, %s, %s)
+                """,
+                (
+                    user["user_id"],
+                    ip_address,
+                    user_agent,
+                    "SUCCESS"
+                )
+            )
+
+        connection.commit()
 
         # ----------------------------------------------------
         # Create JWT

@@ -31,6 +31,19 @@ CREATE TABLE IF NOT EXISTS products (
 );
 
 
+CREATE TABLE login_history (
+    login_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    login_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+    login_status VARCHAR(20) NOT NULL,
+
+    CONSTRAINT fk_login_history_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(user_id)
+);
+
 -- ============================================================
 -- 3. INVENTORY
 -- ============================================================
