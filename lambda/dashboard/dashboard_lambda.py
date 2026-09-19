@@ -122,6 +122,84 @@ def get_recent_orders():
         connection.close()
 
 
+def get_customer(event):
+    customer_id = (
+        event.get("queryStringParameters") or {}
+    ).get("customer_id")
+
+    connection = get_db_connection()
+
+    try:
+        with connection.cursor() as cursor:
+
+            if not customer_id:
+                cursor.execute("""
+                    SELECT
+                        user_id AS customer_id,
+                        name,
+                        email
+                    FROM users
+                    WHERE role = 'customer'
+                      AND is_active = 1
+                    ORDER BY user_id
+                    LIMIT 100
+                """)
+
+                customers = cursor.fetchall()
+
+                return response(
+                    200,
+                    {
+                        "customers": customers
+                    }
+                )
+
+            try:
+                customer_id = int(customer_id)
+
+                if customer_id <= 0:
+                    raise ValueError
+
+            except (ValueError, TypeError):
+                return response(
+                    400,
+                    {
+                        "message": "Invalid customer ID"
+                    }
+                )
+
+            cursor.execute("""
+                SELECT
+                    user_id AS customer_id,
+                    name,
+                    email
+                FROM users
+                WHERE user_id = %s
+                  AND role = 'customer'
+                  AND is_active = 1
+            """, (customer_id,))
+
+            customer = cursor.fetchone()
+
+            if not customer:
+                return response(
+                    404,
+                    {
+                        "message": "Customer not found"
+                    }
+                )
+
+            return response(
+                200,
+                {
+                    "customer": customer
+                }
+            )
+
+    finally:
+        connection.close()
+
+
 def lambda_handler(event, context):
 
     method = (
@@ -143,6 +221,9 @@ def lambda_handler(event, context):
 
     if method == "GET" and path.endswith("/dashboard/orders"):
         return get_recent_orders()
+
+    if method == "GET" and path.endswith("/dashboard/customers"):
+        return get_customer(event)
 
     return response(
         404,
