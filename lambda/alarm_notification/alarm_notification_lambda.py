@@ -49,17 +49,13 @@ def lambda_handler(event, context):
         threshold = reason_data.get("threshold", 0)
         threshold_text = f"> {threshold}"
 
-    recent_datapoints = reason_data.get("recentDatapoints", [])
+    evaluated_datapoints = reason_data.get("evaluatedDatapoints", [])
 
-    if recent_datapoints:
-        value = recent_datapoints[-1]
+    if evaluated_datapoints:
+        value = evaluated_datapoints[-1].get("value", 0)
     else:
-        evaluated_datapoints = reason_data.get("evaluatedDatapoints", [])
-
-        if evaluated_datapoints:
-            value = evaluated_datapoints[-1].get("value", 0)
-        else:
-            value = 0
+        recent_datapoints = reason_data.get("recentDatapoints", [])
+        value = recent_datapoints[-1] if recent_datapoints else 0
 
     if metric_name == "CPUUtilization":
         value_text = f"{value}%"
