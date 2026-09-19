@@ -739,6 +739,15 @@ Resources:
             PayloadFormatVersion: "2.0"
 
 
+        GetDashboardCustomers:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CloudMartApi
+            Path: /dashboard/customers
+            Method: get
+            PayloadFormatVersion: "2.0"
+
+
   AlarmNotificationLambda:
     Type: AWS::Serverless::Function
     Properties:
