@@ -69,6 +69,7 @@ def get_products():
                     ON p.product_id = i.product_id
                 WHERE p.is_active = 1
                 ORDER BY p.product_id
+                LIMIT 100
             """)
 
             products = cursor.fetchall()
@@ -105,7 +106,7 @@ def get_recent_orders():
                 JOIN products p
                     ON oi.product_id = p.product_id
                 ORDER BY o.created_at DESC
-                LIMIT 50
+                LIMIT 100
             """)
 
             orders = cursor.fetchall()

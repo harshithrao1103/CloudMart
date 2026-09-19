@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>CloudMart | Dashboard</title>
+    <title>CloudMart | Admin Dashboard</title>
 
     <style>
         * {
@@ -19,7 +19,7 @@
             color: #111827;
         }
 
-        /* Navbar */
+        /* ================= NAVBAR ================= */
 
         .navbar {
             height: 70px;
@@ -28,10 +28,12 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 35px;
-            position: sticky;
+            padding: 0 30px;
+            position: fixed;
             top: 0;
-            z-index: 10;
+            left: 0;
+            right: 0;
+            z-index: 100;
         }
 
         .brand {
@@ -75,23 +77,83 @@
             padding: 9px 15px;
             border-radius: 7px;
             font-size: 13px;
-            transition: 0.2s;
         }
 
         .logout:hover {
             background: #475569;
         }
 
-        /* Main */
+        /* ================= SIDEBAR ================= */
+
+        .sidebar {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            bottom: 0;
+            width: 230px;
+            background: white;
+            border-right: 1px solid #e2e8f0;
+            padding: 25px 15px;
+            z-index: 90;
+        }
+
+        .sidebar-title {
+            font-size: 11px;
+            color: #94a3b8;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin: 0 12px 12px;
+        }
+
+        .nav-button {
+            width: 100%;
+            border: none;
+            background: transparent;
+            padding: 13px 15px;
+            margin-bottom: 6px;
+            border-radius: 9px;
+            text-align: left;
+            font-size: 14px;
+            color: #475569;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .nav-button:hover {
+            background: #f1f5f9;
+            color: #1d4ed8;
+        }
+
+        .nav-button.active {
+            background: #eff6ff;
+            color: #2563eb;
+            font-weight: 600;
+        }
+
+        .nav-icon {
+            width: 22px;
+            text-align: center;
+            font-size: 17px;
+        }
+
+        /* ================= MAIN ================= */
+
+        .main {
+            margin-left: 230px;
+            padding-top: 70px;
+            min-height: 100vh;
+        }
 
         .container {
-            max-width: 1400px;
+            max-width: 1500px;
             margin: auto;
             padding: 35px;
         }
 
         .page-header {
-            margin-bottom: 30px;
+            margin-bottom: 25px;
         }
 
         .page-header h1 {
@@ -104,7 +166,17 @@
             font-size: 14px;
         }
 
-        /* Stats */
+        /* ================= PAGE SECTIONS ================= */
+
+        .page-section {
+            display: none;
+        }
+
+        .page-section.active {
+            display: block;
+        }
+
+        /* ================= STATS ================= */
 
         .stats {
             display: grid;
@@ -144,13 +216,13 @@
             font-size: 20px;
         }
 
-        /* Section */
+        /* ================= SECTION ================= */
 
         .section {
             background: white;
             border: 1px solid #e2e8f0;
             border-radius: 14px;
-            margin-bottom: 30px;
+            margin-bottom: 25px;
             overflow: hidden;
             box-shadow: 0 3px 10px rgba(0, 0, 0, 0.04);
         }
@@ -173,7 +245,7 @@
             margin-top: 5px;
         }
 
-        /* Tables */
+        /* ================= TABLE ================= */
 
         .table-container {
             overflow-x: auto;
@@ -230,7 +302,61 @@
             color: #166534;
         }
 
-        /* Report */
+        /* ================= TOP PRODUCTS ================= */
+
+        .top-products {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            padding: 20px;
+        }
+
+        .top-product {
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 18px;
+            background: #f8fafc;
+        }
+
+        .top-product-rank {
+            color: #2563eb;
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .top-product-name {
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .top-product-quantity {
+            color: #64748b;
+            font-size: 13px;
+        }
+
+        /* ================= SEARCH ================= */
+
+        .search-box {
+            padding: 18px 25px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .search-input {
+            width: 100%;
+            max-width: 400px;
+            padding: 11px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 13px;
+            outline: none;
+        }
+
+        .search-input:focus {
+            border-color: #2563eb;
+        }
+
+        /* ================= REPORT ================= */
 
         .report-section {
             display: flex;
@@ -249,45 +375,33 @@
             font-size: 13px;
         }
 
-        .report-buttons {
-            display: flex;
-            gap: 10px;
-        }
-
-        .report-button {
+        .download-button {
             text-decoration: none;
             padding: 11px 18px;
             border-radius: 8px;
             font-size: 13px;
             font-weight: 600;
-            transition: 0.2s;
-        }
-
-        .view-button {
-            background: #eff6ff;
-            color: #1d4ed8;
-            border: 1px solid #bfdbfe;
-        }
-
-        .download-button {
             background: #2563eb;
             color: white;
         }
 
-        .report-button:hover {
-            transform: translateY(-1px);
+        .download-button:hover {
+            background: #1d4ed8;
         }
 
-        /* Footer */
+        /* ================= LOW STOCK ================= */
 
-        footer {
-            text-align: center;
-            color: #94a3b8;
-            font-size: 12px;
-            padding: 10px 0 30px;
+        .low-stock-badge {
+            display: inline-block;
+            background: #fee2e2;
+            color: #b91c1c;
+            padding: 5px 9px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
         }
 
-        /* Empty */
+        /* ================= EMPTY ================= */
 
         .empty {
             text-align: center;
@@ -296,23 +410,80 @@
             font-size: 13px;
         }
 
-        /* Responsive */
+        footer {
+            text-align: center;
+            color: #94a3b8;
+            font-size: 12px;
+            padding: 10px 0 30px;
+        }
+
+        /* ================= RESPONSIVE ================= */
+
+        @media (max-width: 1100px) {
+            .top-products {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
 
         @media (max-width: 900px) {
+            .sidebar {
+                width: 190px;
+            }
+
+            .main {
+                margin-left: 190px;
+            }
+
             .stats {
                 grid-template-columns: 1fr;
             }
 
-            .navbar {
-                padding: 0 20px;
+            .top-products {
+                grid-template-columns: repeat(2, 1fr);
             }
 
             .admin-label {
                 display: none;
             }
+        }
+
+        @media (max-width: 600px) {
+            .navbar {
+                padding: 0 15px;
+            }
+
+            .brand-name {
+                font-size: 18px;
+            }
+
+            .sidebar {
+                width: 70px;
+                padding: 20px 8px;
+            }
+
+            .sidebar-title {
+                display: none;
+            }
+
+            .nav-button {
+                justify-content: center;
+                padding: 13px 5px;
+            }
+
+            .nav-button span:not(.nav-icon) {
+                display: none;
+            }
+
+            .main {
+                margin-left: 70px;
+            }
 
             .container {
-                padding: 25px 18px;
+                padding: 20px 12px;
+            }
+
+            .top-products {
+                grid-template-columns: 1fr;
             }
 
             .report-section {
@@ -321,31 +492,12 @@
                 gap: 20px;
             }
         }
-
-        @media (max-width: 500px) {
-            .brand-name {
-                font-size: 18px;
-            }
-
-            .page-header h1 {
-                font-size: 25px;
-            }
-
-            .report-buttons {
-                width: 100%;
-                flex-direction: column;
-            }
-
-            .report-button {
-                text-align: center;
-            }
-        }
     </style>
 </head>
 
 <body>
 
-    <!-- Navbar -->
+    <!-- ================= NAVBAR ================= -->
 
     <nav class="navbar">
 
@@ -356,6 +508,7 @@
 
         <div class="admin-area">
             <span class="admin-label">Administrator</span>
+
             <a href="{{ url_for('logout') }}" class="logout">
                 Logout
             </a>
@@ -364,289 +517,720 @@
     </nav>
 
 
-    <!-- Main Content -->
+    <!-- ================= SIDEBAR ================= -->
 
-    <main class="container">
+    <aside class="sidebar">
 
-        <div class="page-header">
-
-            <h1>Admin Dashboard</h1>
-
-            <p>
-                Monitor CloudMart products, inventory, orders and daily reports.
-            </p>
-
+        <div class="sidebar-title">
+            Administration
         </div>
 
+        <button class="nav-button active" onclick="showPage('home', this)">
+            <span class="nav-icon">🏠</span>
+            <span>Home</span>
+        </button>
 
-        <!-- Statistics -->
+        <button class="nav-button" onclick="showPage('products', this)">
+            <span class="nav-icon">📦</span>
+            <span>Products</span>
+        </button>
 
-        <div class="stats">
+        <button class="nav-button" onclick="showPage('orders', this)">
+            <span class="nav-icon">🛒</span>
+            <span>Orders</span>
+        </button>
 
-            <div class="stat-card">
+    </aside>
 
-                <div class="stat-icon">📦</div>
 
-                <div class="stat-title">
-                    Total Products
-                </div>
+    <!-- ================= MAIN ================= -->
 
-                <div class="stat-value">
-                    {{ products|length }}
-                </div>
+    <main class="main">
 
-            </div>
+        <div class="container">
 
+            <!-- ================================================= -->
+            <!-- HOME -->
+            <!-- ================================================= -->
 
-            <div class="stat-card">
+            <section id="home" class="page-section active">
 
-                <div class="stat-icon">🛒</div>
+                <div class="page-header">
 
-                <div class="stat-title">
-                    Recent Orders
-                </div>
-
-                <div class="stat-value">
-                    {{ orders|length }}
-                </div>
-
-            </div>
-
-
-            <div class="stat-card">
-
-                <div class="stat-icon">📊</div>
-
-                <div class="stat-title">
-                    Report
-                </div>
-
-                <div class="stat-value">
-                    Daily
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <!-- Product Details -->
-
-        <section class="section">
-
-            <div class="section-header">
-
-                <div>
-                    <h2>Product Details</h2>
-                    <p>Current product and inventory information</p>
-                </div>
-
-            </div>
-
-            {% if products %}
-
-            <div class="table-container">
-
-                <table>
-
-                    <thead>
-
-                        <tr>
-                            <th>Product ID</th>
-                            <th>Product Name</th>
-                            <th>Inventory</th>
-                            <th>Cost</th>
-                            <th>Description</th>
-                        </tr>
-
-                    </thead>
-
-                    <tbody>
-
-                        {% for product in products %}
-
-                        <tr>
-
-                            <td class="product-id">
-                                {{ product.product_id }}
-                            </td>
-
-                            <td>
-                                <strong>{{ product.name }}</strong>
-                            </td>
-
-                            <td>
-                                {{ product.inventory if product.inventory is not none else 0 }}
-                            </td>
-
-                            <td class="price">
-                                ₹{{ "%.2f"|format(product.cost) }}
-                            </td>
-
-                            <td class="description">
-                                {{ product.description or "No description available" }}
-                            </td>
-
-                        </tr>
-
-                        {% endfor %}
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-            {% else %}
-
-            <div class="empty">
-                No products available.
-            </div>
-
-            {% endif %}
-
-        </section>
-
-
-        <!-- Recent Orders -->
-
-        <section class="section">
-
-            <div class="section-header">
-
-                <div>
-                    <h2>Recent Orders</h2>
-                    <p>Latest orders placed in CloudMart</p>
-                </div>
-
-            </div>
-
-            {% if orders %}
-
-            <div class="table-container">
-
-                <table>
-
-                    <thead>
-
-                        <tr>
-                            <th>Date & Time (IST)</th>
-                            <th>Order ID</th>
-                            <th>Customer ID</th>
-                            <th>Product ID</th>
-                            <th>Product Name</th>
-                            <th>Quantity</th>
-                            <th>Total Bill</th>
-                            <th>Status</th>
-                        </tr>
-
-                    </thead>
-
-                    <tbody>
-
-                        {% for order in orders %}
-
-                        <tr>
-
-                            <td>
-                                {{ order.created_at }}
-                            </td>
-
-                            <td class="order-id">
-                                {{ order.order_id }}
-                            </td>
-
-                            <td>
-                                {{ order.customer_id }}
-                            </td>
-
-                            <td>
-                                {{ order.product_id }}
-                            </td>
-
-                            <td>
-                                <strong>{{ order.product_name }}</strong>
-                            </td>
-
-                            <td>
-                                {{ order.quantity }}
-                            </td>
-
-                            <td class="price">
-                                ₹{{ "%.2f"|format(order.total_bill) }}
-                            </td>
-
-                            <td>
-                                <span class="status">
-                                    {{ order.status }}
-                                </span>
-                            </td>
-
-                        </tr>
-
-                        {% endfor %}
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-            {% else %}
-
-            <div class="empty">
-                No recent orders available.
-            </div>
-
-            {% endif %}
-
-        </section>
-
-
-        <!-- Daily Report -->
-
-        <section class="section">
-
-            <div class="report-section">
-
-                <div class="report-info">
-
-                    <h3>📄 Daily Report</h3>
+                    <h1>Dashboard Home</h1>
 
                     <p>
-                        View or download today's CloudMart revenue report.
+                        Overview of CloudMart products, orders and daily activity.
                     </p>
 
                 </div>
 
-                <div class="report-buttons">
 
-                    <a
-                        href="{{ url_for('view_report') }}"
-                        class="report-button view-button"
-                    >
-                        View Today's CSV
-                    </a>
+                <!-- Statistics -->
 
-                    <a
-                        href="{{ url_for('download_report') }}"
-                        class="report-button download-button"
-                    >
-                        Download Today's CSV
-                    </a>
+                <div class="stats">
+
+                    <div class="stat-card">
+
+                        <div class="stat-icon">📦</div>
+
+                        <div class="stat-title">
+                            Total Products
+                        </div>
+
+                        <div class="stat-value">
+                            {{ products|length }}
+                        </div>
+
+                    </div>
+
+
+                    <div class="stat-card">
+
+                        <div class="stat-icon">🛒</div>
+
+                        <div class="stat-title">
+                            Recent Orders
+                        </div>
+
+                        <div class="stat-value">
+                            {{ orders|length }}
+                        </div>
+
+                    </div>
+
+
+                    <div class="stat-card">
+
+                        <div class="stat-icon">📊</div>
+
+                        <div class="stat-title">
+                            Daily Report
+                        </div>
+
+                        <div class="stat-value">
+                            Ready
+                        </div>
+
+                    </div>
 
                 </div>
 
-            </div>
 
-        </section>
+                <!-- Top 5 Most Ordered Products -->
+
+                <section class="section">
+
+                    <div class="section-header">
+
+                        <div>
+                            <h2>Top 5 Most Ordered Products</h2>
+                            <p>Products with the highest ordered quantity</p>
+                        </div>
+
+                    </div>
+
+                    <div id="topProducts" class="top-products"></div>
+
+                </section>
+
+
+                <!-- Latest 5 Orders -->
+
+                <section class="section">
+
+                    <div class="section-header">
+
+                        <div>
+                            <h2>Latest 5 Orders</h2>
+                            <p>Most recent orders placed in CloudMart</p>
+                        </div>
+
+                    </div>
+
+                    {% if orders %}
+
+                    <div class="table-container">
+
+                        <table>
+
+                            <thead>
+
+                                <tr>
+                                    <th>Date & Time (IST)</th>
+                                    <th>Order ID</th>
+                                    <th>Customer ID</th>
+                                    <th>Product ID</th>
+                                    <th>Product Name</th>
+                                    <th>Quantity</th>
+                                    <th>Total Bill</th>
+                                    <th>Status</th>
+                                </tr>
+
+                            </thead>
+
+                            <tbody>
+
+                                {% for order in orders[:5] %}
+
+                                <tr>
+
+                                    <td>
+                                        {{ order.created_at }}
+                                    </td>
+
+                                    <td class="order-id">
+                                        {{ order.order_id }}
+                                    </td>
+
+                                    <td>
+                                        {{ order.customer_id }}
+                                    </td>
+
+                                    <td>
+                                        {{ order.product_id }}
+                                    </td>
+
+                                    <td>
+                                        <strong>{{ order.product_name }}</strong>
+                                    </td>
+
+                                    <td>
+                                        {{ order.quantity }}
+                                    </td>
+
+                                    <td class="price">
+                                        ₹{{ "%.2f"|format(order.total_bill) }}
+                                    </td>
+
+                                    <td>
+                                        <span class="status">
+                                            {{ order.status }}
+                                        </span>
+                                    </td>
+
+                                </tr>
+
+                                {% endfor %}
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                    {% else %}
+
+                    <div class="empty">
+                        No recent orders available.
+                    </div>
+
+                    {% endif %}
+
+                </section>
+
+
+                <!-- Daily Report -->
+
+                <section class="section">
+
+                    <div class="report-section">
+
+                        <div class="report-info">
+
+                            <h3>📄 Daily Report</h3>
+
+                            <p>
+                                Download today's CloudMart revenue report.
+                            </p>
+
+                        </div>
+
+                        <a
+                            href="{{ url_for('download_report') }}"
+                            class="download-button"
+                        >
+                            Download Today
+                        </a>
+
+                    </div>
+
+                </section>
+
+            </section>
+
+
+            <!-- ================================================= -->
+            <!-- PRODUCTS -->
+            <!-- ================================================= -->
+
+            <section id="products" class="page-section">
+
+                <div class="page-header">
+
+                    <h1>Products</h1>
+
+                    <p>
+                        View all CloudMart products and inventory information.
+                    </p>
+
+                </div>
+
+
+                <!-- All Products -->
+
+                <section class="section">
+
+                    <div class="section-header">
+
+                        <div>
+                            <h2>All Products</h2>
+                            <p>Current product inventory and pricing</p>
+                        </div>
+
+                    </div>
+
+                    {% if products %}
+
+                    <div class="table-container">
+
+                        <table>
+
+                            <thead>
+
+                                <tr>
+                                    <th>Product ID</th>
+                                    <th>Product Name</th>
+                                    <th>Inventory</th>
+                                    <th>Cost</th>
+                                    <th>Description</th>
+                                </tr>
+
+                            </thead>
+
+                            <tbody>
+
+                                {% for product in products %}
+
+                                <tr>
+
+                                    <td class="product-id">
+                                        {{ product.product_id }}
+                                    </td>
+
+                                    <td>
+                                        <strong>{{ product.name }}</strong>
+                                    </td>
+
+                                    <td>
+                                        {{ product.inventory if product.inventory is not none else 0 }}
+                                    </td>
+
+                                    <td class="price">
+                                        ₹{{ "%.2f"|format(product.cost) }}
+                                    </td>
+
+                                    <td class="description">
+                                        {{ product.description or "No description available" }}
+                                    </td>
+
+                                </tr>
+
+                                {% endfor %}
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                    {% else %}
+
+                    <div class="empty">
+                        No products available.
+                    </div>
+
+                    {% endif %}
+
+                </section>
+
+
+                <!-- Low Stock Products -->
+
+                <section class="section">
+
+                    <div class="section-header">
+
+                        <div>
+                            <h2>Low Stock Products</h2>
+                            <p>Products with inventory of 5 units or less</p>
+                        </div>
+
+                    </div>
+
+                    <div id="lowStockProducts"></div>
+
+                </section>
+
+            </section>
+
+
+            <!-- ================================================= -->
+            <!-- ORDERS -->
+            <!-- ================================================= -->
+
+            <section id="orders" class="page-section">
+
+                <div class="page-header">
+
+                    <h1>Orders</h1>
+
+                    <p>
+                        View and search CloudMart customer orders.
+                    </p>
+
+                </div>
+
+
+                <section class="section">
+
+                    <div class="section-header">
+
+                        <div>
+                            <h2>All Orders</h2>
+                            <p>Search orders using Customer ID</p>
+                        </div>
+
+                    </div>
+
+
+                    <div class="search-box">
+
+                        <input
+                            type="text"
+                            id="customerSearch"
+                            class="search-input"
+                            placeholder="Enter Customer ID"
+                            onkeyup="filterOrders()"
+                        >
+
+                    </div>
+
+
+                    {% if orders %}
+
+                    <div class="table-container">
+
+                        <table>
+
+                            <thead>
+
+                                <tr>
+                                    <th>Date & Time (IST)</th>
+                                    <th>Order ID</th>
+                                    <th>Customer ID</th>
+                                    <th>Product ID</th>
+                                    <th>Product Name</th>
+                                    <th>Quantity</th>
+                                    <th>Total Bill</th>
+                                    <th>Status</th>
+                                </tr>
+
+                            </thead>
+
+                            <tbody id="ordersTableBody">
+
+                                {% for order in orders %}
+
+                                <tr class="order-row">
+
+                                    <td>
+                                        {{ order.created_at }}
+                                    </td>
+
+                                    <td class="order-id">
+                                        {{ order.order_id }}
+                                    </td>
+
+                                    <td class="customer-id">
+                                        {{ order.customer_id }}
+                                    </td>
+
+                                    <td>
+                                        {{ order.product_id }}
+                                    </td>
+
+                                    <td>
+                                        <strong>{{ order.product_name }}</strong>
+                                    </td>
+
+                                    <td>
+                                        {{ order.quantity }}
+                                    </td>
+
+                                    <td class="price">
+                                        ₹{{ "%.2f"|format(order.total_bill) }}
+                                    </td>
+
+                                    <td>
+                                        <span class="status">
+                                            {{ order.status }}
+                                        </span>
+                                    </td>
+
+                                </tr>
+
+                                {% endfor %}
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                    {% else %}
+
+                    <div class="empty">
+                        No orders available.
+                    </div>
+
+                    {% endif %}
+
+                </section>
+
+            </section>
+
+
+            <footer>
+                CloudMart Admin Portal
+            </footer>
+
+        </div>
 
     </main>
 
 
-    <footer>
-        CloudMart Admin Portal
-    </footer>
+    <!-- ================= JAVASCRIPT ================= -->
+
+    <script>
+
+        /* ================= PAGE SWITCHING ================= */
+
+        function showPage(pageId, button) {
+
+            document.querySelectorAll(".page-section").forEach(function(section) {
+                section.classList.remove("active");
+            });
+
+            document.getElementById(pageId).classList.add("active");
+
+            document.querySelectorAll(".nav-button").forEach(function(navButton) {
+                navButton.classList.remove("active");
+            });
+
+            button.classList.add("active");
+        }
+
+
+        /* ================= TOP 5 PRODUCTS ================= */
+
+        const orders = [
+            {% for order in orders %}
+            {
+                productId: "{{ order.product_id }}",
+                productName: "{{ order.product_name|replace('"', '\\"') }}",
+                quantity: Number("{{ order.quantity }}")
+            },
+            {% endfor %}
+        ];
+
+        const productTotals = {};
+
+        orders.forEach(function(order) {
+
+            if (!productTotals[order.productId]) {
+
+                productTotals[order.productId] = {
+                    name: order.productName,
+                    quantity: 0
+                };
+
+            }
+
+            productTotals[order.productId].quantity += order.quantity;
+
+        });
+
+        const topProducts = Object.values(productTotals)
+            .sort(function(a, b) {
+                return b.quantity - a.quantity;
+            })
+            .slice(0, 5);
+
+        const topProductsContainer =
+            document.getElementById("topProducts");
+
+        if (topProducts.length === 0) {
+
+            topProductsContainer.innerHTML =
+                '<div class="empty">No order data available.</div>';
+
+        } else {
+
+            topProducts.forEach(function(product, index) {
+
+                topProductsContainer.innerHTML += `
+                    <div class="top-product">
+
+                        <div class="top-product-rank">
+                            #${index + 1}
+                        </div>
+
+                        <div class="top-product-name">
+                            ${product.name}
+                        </div>
+
+                        <div class="top-product-quantity">
+                            ${product.quantity} units ordered
+                        </div>
+
+                    </div>
+                `;
+
+            });
+
+        }
+
+
+        /* ================= LOW STOCK PRODUCTS ================= */
+
+        const allProducts = [
+            {% for product in products %}
+            {
+                id: "{{ product.product_id }}",
+                name: "{{ product.name|replace('"', '\\"') }}",
+                inventory: Number("{{ product.inventory if product.inventory is not none else 0 }}"),
+                cost: Number("{{ product.cost or 0 }}"),
+                description: "{{ product.description|replace('"', '\\"') if product.description else '' }}"
+            },
+            {% endfor %}
+        ];
+
+        const lowStockProducts =
+            allProducts.filter(function(product) {
+                return product.inventory <= 5;
+            });
+
+        const lowStockContainer =
+            document.getElementById("lowStockProducts");
+
+        if (lowStockProducts.length === 0) {
+
+            lowStockContainer.innerHTML =
+                '<div class="empty">No low stock products.</div>';
+
+        } else {
+
+            let html = `
+                <div class="table-container">
+
+                    <table>
+
+                        <thead>
+
+                            <tr>
+                                <th>Product ID</th>
+                                <th>Product Name</th>
+                                <th>Inventory</th>
+                                <th>Cost</th>
+                                <th>Description</th>
+                            </tr>
+
+                        </thead>
+
+                        <tbody>
+            `;
+
+            lowStockProducts.forEach(function(product) {
+
+                html += `
+                    <tr>
+
+                        <td class="product-id">
+                            ${product.id}
+                        </td>
+
+                        <td>
+                            <strong>${product.name}</strong>
+                        </td>
+
+                        <td>
+                            <span class="low-stock-badge">
+                                ${product.inventory} units
+                            </span>
+                        </td>
+
+                        <td class="price">
+                            ₹${product.cost.toFixed(2)}
+                        </td>
+
+                        <td class="description">
+                            ${product.description || "No description available"}
+                        </td>
+
+                    </tr>
+                `;
+
+            });
+
+            html += `
+                        </tbody>
+
+                    </table>
+
+                </div>
+            `;
+
+            lowStockContainer.innerHTML = html;
+        }
+
+
+        /* ================= CUSTOMER SEARCH ================= */
+
+        function filterOrders() {
+
+            const search =
+                document.getElementById("customerSearch")
+                .value
+                .trim()
+                .toLowerCase();
+
+            const rows =
+                document.querySelectorAll(".order-row");
+
+            rows.forEach(function(row) {
+
+                const customerId =
+                    row.querySelector(".customer-id")
+                    .textContent
+                    .trim()
+                    .toLowerCase();
+
+                if (search === "" || customerId.includes(search)) {
+
+                    row.style.display = "";
+
+                } else {
+
+                    row.style.display = "none";
+
+                }
+
+            });
+
+        }
+
+    </script>
 
 </body>
 </html>
