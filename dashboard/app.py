@@ -3,7 +3,9 @@ import requests
 import boto3
 from datetime import datetime
 from zoneinfo import ZoneInfo
+
 IST = ZoneInfo("Asia/Kolkata")
+
 
 def format_ist_time(value):
     if not value:
@@ -17,6 +19,7 @@ def format_ist_time(value):
 
     return value.astimezone(IST).strftime("%Y-%m-%d %H:%M:%S")
 
+
 app = Flask(__name__)
 
 app.secret_key = "cloudmart-dashboard-secret"
@@ -25,8 +28,6 @@ API_URL = "https://0h8szqn3r5.execute-api.us-east-1.amazonaws.com/dev"
 REPORTS_BUCKET = "cloudmart-dev-reports-598886663370"
 
 s3 = boto3.client("s3")
-
-IST = ZoneInfo("Asia/Kolkata")
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -114,13 +115,93 @@ def dashboard():
     )
 
     for order in orders:
-        order["created_at"] = format_ist_time(order.get("created_at"))
-
+        order["created_at"] = format_ist_time(
+            order.get("created_at")
+        )
 
     return render_template(
         "dashboard.html",
         products=products,
         orders=orders
+    )
+
+
+@app.route("/api/customers")
+def customers():
+    token = session.get("admin_token")
+
+    if not token:
+        return {
+            "message": "Unauthorized"
+        }, 401
+
+    try:
+        response = requests.get(
+            f"{API_URL}/dashboard/customers",
+            headers={
+                "Authorization": f"Bearer {token}"
+            },
+            timeout=10
+        )
+
+    except requests.RequestException:
+        return {
+            "message": "Unable to connect to CloudMart API"
+        }, 502
+
+    if response.status_code == 401:
+        session.clear()
+        return {
+            "message": "Unauthorized"
+        }, 401
+
+    return (
+        response.text,
+        response.status_code,
+        {
+            "Content-Type": "application/json"
+        }
+    )
+
+
+@app.route("/api/customer/<customer_id>")
+def customer(customer_id):
+    token = session.get("admin_token")
+
+    if not token:
+        return {
+            "message": "Unauthorized"
+        }, 401
+
+    try:
+        response = requests.get(
+            f"{API_URL}/dashboard/customers",
+            params={
+                "customer_id": customer_id
+            },
+            headers={
+                "Authorization": f"Bearer {token}"
+            },
+            timeout=10
+        )
+
+    except requests.RequestException:
+        return {
+            "message": "Unable to connect to CloudMart API"
+        }, 502
+
+    if response.status_code == 401:
+        session.clear()
+        return {
+            "message": "Unauthorized"
+        }, 401
+
+    return (
+        response.text,
+        response.status_code,
+        {
+            "Content-Type": "application/json"
+        }
     )
 
 

@@ -540,6 +540,11 @@
             <span>Orders</span>
         </button>
 
+        <button class="nav-button" onclick="showPage('customers', this)">
+            <span class="nav-icon">👤</span>
+            <span>Customers</span>
+        </button>
+
     </aside>
 
 
@@ -777,6 +782,34 @@
                 </div>
 
 
+                <!-- Product Search -->
+
+                <section class="section">
+
+                    <div class="section-header">
+
+                        <div>
+                            <h2>Search Product</h2>
+                            <p>Search products using Product ID</p>
+                        </div>
+
+                    </div>
+
+                    <div class="search-box">
+
+                        <input
+                            type="text"
+                            id="productSearch"
+                            class="search-input"
+                            placeholder="Enter Product ID"
+                            onkeyup="filterProducts()"
+                        >
+
+                    </div>
+
+                </section>
+
+
                 <!-- All Products -->
 
                 <section class="section">
@@ -812,9 +845,9 @@
 
                                 {% for product in products %}
 
-                                <tr>
+                                <tr class="product-row">
 
-                                    <td class="product-id">
+                                    <td class="product-id product-id-value">
                                         {{ product.product_id }}
                                     </td>
 
@@ -1001,6 +1034,66 @@
             </section>
 
 
+            <!-- ================================================= -->
+            <!-- CUSTOMERS -->
+            <!-- ================================================= -->
+
+            <section id="customers" class="page-section">
+
+                <div class="page-header">
+
+                    <h1>Customers</h1>
+
+                    <p>
+                        Search and view CloudMart customer details.
+                    </p>
+
+                </div>
+
+
+                <section class="section">
+
+                    <div class="section-header">
+
+                        <div>
+                            <h2>Customer Details</h2>
+                            <p>Search customers using Customer ID</p>
+                        </div>
+
+                    </div>
+
+                    <div class="search-box">
+
+                        <input
+                            type="text"
+                            id="customerDetailsSearch"
+                            class="search-input"
+                            placeholder="Enter Customer ID"
+                            onkeyup="handleCustomerSearchKey(event)"
+                        >
+
+                        <button
+                            type="button"
+                            class="download-button"
+                            onclick="searchCustomer()"
+                            style="border: none; cursor: pointer; margin-left: 8px;"
+                        >
+                            Search
+                        </button>
+
+                    </div>
+
+                    <div id="customerResult">
+                        <div class="empty">
+                            Loading customers...
+                        </div>
+                    </div>
+
+                </section>
+
+            </section>
+
+
             <footer>
                 CloudMart Admin Portal
             </footer>
@@ -1029,6 +1122,10 @@
             });
 
             button.classList.add("active");
+
+            if (pageId === "customers") {
+                loadAllCustomers();
+            }
         }
 
 
@@ -1195,6 +1292,279 @@
         }
 
 
+        /* ================= PRODUCT SEARCH ================= */
+
+        function filterProducts() {
+
+            const search =
+                document.getElementById("productSearch")
+                .value
+                .trim()
+                .toLowerCase();
+
+            const rows =
+                document.querySelectorAll(".product-row");
+
+            rows.forEach(function(row) {
+
+                const productId =
+                    row.querySelector(".product-id-value")
+                    .textContent
+                    .trim()
+                    .toLowerCase();
+
+                if (search === "" || productId === search) {
+                    row.style.display = "";
+                } else {
+                    row.style.display = "none";
+                }
+
+            });
+
+        }
+
+
+        /* ================= CUSTOMER DETAILS SEARCH ================= */
+
+        function handleCustomerSearchKey(event) {
+
+            if (event.key === "Enter") {
+                searchCustomer();
+            }
+
+        }
+
+
+        async function searchCustomer() {
+
+            const customerId =
+                document.getElementById("customerDetailsSearch")
+                .value
+                .trim();
+
+            const result =
+                document.getElementById("customerResult");
+
+            result.innerHTML =
+                '<div class="empty">Searching...</div>';
+
+            try {
+
+                let url;
+
+                if (customerId) {
+
+                    if (!/^\d+$/.test(customerId)) {
+
+                        result.innerHTML =
+                            '<div class="empty">Please enter a valid Customer ID.</div>';
+
+                        return;
+                    }
+
+                    url =
+                        `/api/customer/${encodeURIComponent(customerId)}`;
+
+                } else {
+
+                    url = "/api/customers";
+
+                }
+
+                const response = await fetch(url);
+
+                const data = await response.json();
+
+                if (!response.ok) {
+
+                    result.innerHTML =
+                        `<div class="empty">${data.message || "Unable to load customers."}</div>`;
+
+                    return;
+                }
+
+                let customers = [];
+
+                if (data.customers) {
+
+                    customers = data.customers;
+
+                } else if (data.customer) {
+
+                    customers = [data.customer];
+
+                }
+
+                if (customers.length === 0) {
+
+                    result.innerHTML =
+                        '<div class="empty">No customers found.</div>';
+
+                    return;
+                }
+
+                let html = `
+                    <div class="table-container">
+
+                        <table>
+
+                            <thead>
+
+                                <tr>
+                                    <th>Customer ID</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                </tr>
+
+                            </thead>
+
+                            <tbody>
+                `;
+
+                customers.forEach(function(customer) {
+
+                    html += `
+                        <tr>
+
+                            <td class="product-id">
+                                ${customer.customer_id}
+                            </td>
+
+                            <td>
+                                <strong>${customer.name || "-"}</strong>
+                            </td>
+
+                            <td>
+                                ${customer.email || "-"}
+                            </td>
+
+                        </tr>
+                    `;
+
+                });
+
+                html += `
+                            </tbody>
+
+                        </table>
+
+                    </div>
+                `;
+
+                result.innerHTML = html;
+
+            } catch (error) {
+
+                result.innerHTML =
+                    '<div class="empty">Unable to connect to the CloudMart dashboard.</div>';
+
+            }
+
+        }
+
+
+        async function loadAllCustomers() {
+
+            const input =
+                document.getElementById("customerDetailsSearch");
+
+            const result =
+                document.getElementById("customerResult");
+
+            if (input.value.trim() !== "") {
+                return;
+            }
+
+            result.innerHTML =
+                '<div class="empty">Loading customers...</div>';
+
+            try {
+
+                const response =
+                    await fetch("/api/customers");
+
+                const data =
+                    await response.json();
+
+                if (!response.ok) {
+
+                    result.innerHTML =
+                        `<div class="empty">${data.message || "Unable to load customers."}</div>`;
+
+                    return;
+                }
+
+                const customers =
+                    data.customers || [];
+
+                if (customers.length === 0) {
+
+                    result.innerHTML =
+                        '<div class="empty">No customers found.</div>';
+
+                    return;
+                }
+
+                let html = `
+                    <div class="table-container">
+
+                        <table>
+
+                            <thead>
+
+                                <tr>
+                                    <th>Customer ID</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                </tr>
+
+                            </thead>
+
+                            <tbody>
+                `;
+
+                customers.forEach(function(customer) {
+
+                    html += `
+                        <tr>
+
+                            <td class="product-id">
+                                ${customer.customer_id}
+                            </td>
+
+                            <td>
+                                <strong>${customer.name || "-"}</strong>
+                            </td>
+
+                            <td>
+                                ${customer.email || "-"}
+                            </td>
+
+                        </tr>
+                    `;
+
+                });
+
+                html += `
+                            </tbody>
+
+                        </table>
+
+                    </div>
+                `;
+
+                result.innerHTML = html;
+
+            } catch (error) {
+
+                result.innerHTML =
+                    '<div class="empty">Unable to connect to the CloudMart dashboard.</div>';
+
+            }
+
+        }
+
+
         /* ================= CUSTOMER SEARCH ================= */
 
         function filterOrders() {
@@ -1229,6 +1599,20 @@
             });
 
         }
+
+
+        /* ================= LOAD CUSTOMERS ON PAGE LOAD ================= */
+
+        document.addEventListener("DOMContentLoaded", function() {
+
+            const customerSection =
+                document.getElementById("customers");
+
+            if (customerSection.classList.contains("active")) {
+                loadAllCustomers();
+            }
+
+        });
 
     </script>
 
