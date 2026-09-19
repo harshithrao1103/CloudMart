@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS products (
 
 CREATE TABLE login_history (
     login_id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
+    user_id BIGINT NOT NULL,
     login_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     ip_address VARCHAR(45),
     user_agent TEXT,
