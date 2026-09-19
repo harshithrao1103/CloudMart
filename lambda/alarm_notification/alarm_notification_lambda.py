@@ -1,6 +1,7 @@
 import json
 import boto3
 import os
+import re
 
 sns = boto3.client("sns")
 
@@ -9,7 +10,6 @@ MONITORING_TOPIC_ARN = os.environ["MONITORING_TOPIC_ARN"]
 
 def lambda_handler(event, context):
     message = json.loads(event["Records"][0]["Sns"]["Message"])
-    print("SNS ALARM MESSAGE:", json.dumps(message))
 
     alarm_name = message.get("AlarmName", "")
     new_state = message.get("NewStateValue", "UNKNOWN")
@@ -54,14 +54,26 @@ def lambda_handler(event, context):
 
     if evaluated_datapoints:
         value = evaluated_datapoints[-1].get("value", 0)
+
     else:
         recent_datapoints = reason_data.get("recentDatapoints", [])
-        value = recent_datapoints[-1] if recent_datapoints else 0
+
+        if recent_datapoints:
+            value = recent_datapoints[-1]
+
+        else:
+            state_reason = message.get("NewStateReason", "")
+            match = re.search(r"datapoint[s]? \[([0-9.]+)", state_reason)
+
+            if match:
+                value = float(match.group(1))
+            else:
+                value = 0
 
     if metric_name == "CPUUtilization":
-        value_text = f"{value}%"
+        value_text = f"{value:g}%"
     else:
-        value_text = str(value)
+        value_text = f"{value:g}"
 
     message_text = f"""CLOUDMART ALERT
 
