@@ -24,11 +24,12 @@ def publish_metric(metric_name):
         ]
     )
 
+
 def lambda_handler(event, context):
 
     detail_type = event.get("detail-type")
 
-    if detail_type == "OrderCreated":
+    if detail_type == "OrderConfirmed":
         publish_metric("OrdersPlaced")
 
         return {

@@ -752,9 +752,33 @@ def create_order(event):
                 )
 
             # =================================================
+            # DEDUCT INVENTORY
+            #
+            # Inventory is deducted during order creation because
+            # the order is automatically confirmed.
+            # =================================================
+
+            for item in order_items:
+
+                cursor.execute(
+                    """
+                    UPDATE inventory
+                    SET
+                        quantity = quantity - %s,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE product_id = %s
+                    """,
+                    (
+                        item["quantity"],
+                        item["product_id"]
+                    )
+                )
+
+            # =================================================
             # CREATE ORDER
             #
-            # Inventory is NOT deducted here.
+            # Order is automatically CONFIRMED.
+            # Inventory has already been deducted above.
             # =================================================
 
             cursor.execute(
@@ -774,7 +798,7 @@ def create_order(event):
                 """,
                 (
                     customer_id,
-                    "CREATED",
+                    "CONFIRMED",
                     total_amount
                 )
             )
@@ -835,7 +859,7 @@ def create_order(event):
                 """,
                 (
                     order_id,
-                    "CREATED",
+                    "CONFIRMED",
                     "API"
                 )
             )
@@ -851,12 +875,12 @@ def create_order(event):
         # =====================================================
 
         publish_order_event(
-            "OrderCreated",
+            "OrderConfirmed",
             {
                 "order_id": order_id,
                 "customer_id": customer_id,
                 "customer_email": customer["email"],
-                "status": "CREATED",
+                "status": "CONFIRMED",
                 "total_amount": total_amount,
                 "items": order_items
             }
@@ -872,7 +896,7 @@ def create_order(event):
             {
                 "order_id": order_id,
                 "customer_id": customer_id,
-                "status": "CREATED",
+                "status": "CONFIRMED",
                 "total_amount": total_amount,
                 "items": order_items
             }
@@ -1193,7 +1217,6 @@ def update_order(event, order_id):
     # --------------------------------------------------------
 
     allowed_statuses = {
-        "CREATED",
         "CONFIRMED",
         "PROCESSING",
         "SHIPPED",
@@ -1264,11 +1287,6 @@ def update_order(event, order_id):
 
             valid_transitions = {
 
-                "CREATED": {
-                    "CONFIRMED",
-                    "CANCELLED"
-                },
-
                 "CONFIRMED": {
                     "PROCESSING",
                     "CANCELLED"
@@ -1303,74 +1321,10 @@ def update_order(event, order_id):
                 )
 
             # =================================================
-            # CONFIRM ORDER
-            #
-            # Deduct inventory only when order is confirmed.
-            # =================================================
-
-            if new_status == "CONFIRMED":
-
-                cursor.execute(
-                    """
-                    SELECT
-                        oi.product_id,
-                        oi.quantity,
-                        i.quantity AS inventory_quantity
-                    FROM order_items oi
-                    INNER JOIN inventory i
-                        ON oi.product_id = i.product_id
-                    WHERE oi.order_id = %s
-                    FOR UPDATE
-                    """,
-                    (order_id,)
-                )
-
-                items = cursor.fetchall()
-
-                if not items:
-
-                    raise Exception(
-                        "Order has no inventory items"
-                    )
-
-                # ------------------------------------------------
-                # Check all inventory BEFORE deducting anything
-                # ------------------------------------------------
-
-                for item in items:
-
-                    if (
-                        item["inventory_quantity"]
-                        < item["quantity"]
-                    ):
-
-                        raise Exception(
-                            f"Insufficient inventory for "
-                            f"product {item['product_id']}"
-                        )
-
-                # ------------------------------------------------
-                # Deduct inventory
-                # ------------------------------------------------
-
-                for item in items:
-
-                    cursor.execute(
-                        """
-                        UPDATE inventory
-                        SET
-                            quantity = quantity - %s,
-                            updated_at = CURRENT_TIMESTAMP
-                        WHERE product_id = %s
-                        """,
-                        (
-                            item["quantity"],
-                            item["product_id"]
-                        )
-                    )
-
-            # =================================================
             # UPDATE ORDER STATUS
+            #
+            # Inventory is already deducted when the order is
+            # created and automatically confirmed.
             # =================================================
 
             cursor.execute(
@@ -1478,18 +1432,6 @@ def update_order(event, order_id):
             "Update order error:",
             error_message
         )
-
-        # ----------------------------------------------------
-        # Confirmation failure -> SQS failure queue
-        # ----------------------------------------------------
-
-        if new_status == "CONFIRMED":
-
-            send_failure_to_sqs(
-                order_id=order_id,
-                error_message=error_message,
-                failed_operation="CONFIRM_ORDER"
-            )
 
         return response(
             500,
@@ -1982,7 +1924,6 @@ def cancel_order(event, order_id):
             # ------------------------------------------------
 
             if old_status not in {
-                "CREATED",
                 "CONFIRMED",
                 "PROCESSING"
             }:
@@ -1999,8 +1940,8 @@ def cancel_order(event, order_id):
             # =================================================
             # RESTORE INVENTORY
             #
-            # Only CONFIRMED / PROCESSING orders have had
-            # inventory deducted.
+            # CONFIRMED / PROCESSING orders have had inventory
+            # deducted at order creation.
             # =================================================
 
             if old_status in {
