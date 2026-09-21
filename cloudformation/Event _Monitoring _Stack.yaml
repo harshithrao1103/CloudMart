@@ -127,6 +127,26 @@ Resources:
         - !Ref MonitoringTopic
 
 
+  ProductLambdaErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub cloudmart-${Environment}-product-lambda-errors
+      AlarmDescription: Alarm when the Product Lambda has execution errors
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: !Sub cloudmart-${Environment}-product
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref MonitoringTopic
+
+
   RDSCPUAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
@@ -241,6 +261,24 @@ Resources:
                 ],
                 "stat": "Sum",
                 "period": 300
+              }
+            },
+            {
+              "type": "metric",
+              "properties": {
+                "title": "Product Lambda Errors",
+                "view": "timeSeries",
+                "region": "${AWS::Region}",
+                "stat": "Sum",
+                "period": 300,
+                "metrics": [
+                  [
+                    "AWS/Lambda",
+                    "Errors",
+                    "FunctionName",
+                    "cloudmart-${Environment}-product"
+                  ]
+                ]
               }
             },
             {
