@@ -166,6 +166,26 @@ Resources:
       AlarmActions:
         - !Ref MonitoringTopic
 
+  
+  ApiGateway5xxErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub cloudmart-${Environment}-api-gateway-5xx-errors
+      AlarmDescription: Alarm when API Gateway returns 5XX errors
+      Namespace: AWS/ApiGateway
+      MetricName: 5xx
+      Dimensions:
+        - Name: ApiId
+          Value: 0h8szqn3r5
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref MonitoringTopic
+
  
 
   OperationsDashboard:
@@ -239,6 +259,48 @@ Resources:
                 ],
                 "stat": "Sum",
                 "period": 300
+              }
+            },
+            {
+              "type": "metric",
+              "properties": {
+                "title": "API Gateway Invocations",
+                "view": "timeSeries",
+                "region": "${AWS::Region}",
+                "stat": "Sum",
+                "period": 86400,
+                "metrics": [
+                  [
+                    "AWS/ApiGateway",
+                    "Count",
+                    "ApiId",
+                    "0h8szqn3r5"
+                  ]
+                ]
+              }
+            },
+            {
+              "type": "metric",
+              "properties": {
+                "title": "API Gateway Errors (4XX + 5XX)",
+                "view": "timeSeries",
+                "region": "${AWS::Region}",
+                "stat": "Sum",
+                "period": 300,
+                "metrics": [
+                  [
+                    "AWS/ApiGateway",
+                    "4xx",
+                    "ApiId",
+                    "0h8szqn3r5"
+                  ],
+                  [
+                    "AWS/ApiGateway",
+                    "5xx",
+                    "ApiId",
+                    "0h8szqn3r5"
+                  ]
+                ]
               }
             },
             {
