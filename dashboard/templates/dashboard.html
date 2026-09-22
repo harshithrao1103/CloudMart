@@ -356,13 +356,16 @@
             border-color: #2563eb;
         }
 
-        /* ================= REPORT ================= */
+      /* ================= REPORT ================= */
 
         .report-section {
+            padding: 25px;
+        }
+
+        .report-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 25px;
         }
 
         .report-info h3 {
@@ -377,9 +380,9 @@
 
         .download-button {
             text-decoration: none;
-            padding: 11px 18px;
+            padding: 13px 22px;
             border-radius: 8px;
-            font-size: 13px;
+            font-size: 14px;
             font-weight: 600;
             background: #2563eb;
             color: white;
@@ -389,6 +392,124 @@
             background: #1d4ed8;
         }
 
+        .report-divider {
+            height: 1px;
+            background: #e2e8f0;
+            margin: 25px 0;
+        }
+
+        .previous-reports h4 {
+            font-size: 18px;
+            margin-bottom: 7px;
+        }
+
+        .previous-reports-description {
+            color: #64748b;
+            font-size: 13px;
+            margin-bottom: 25px;
+        }
+
+        .reports-carousel {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .report-list {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 20px;
+            flex: 1;
+        }
+
+        .previous-report {
+            min-height: 155px;
+            padding: 22px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            background: white;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .report-date {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .report-calendar {
+            width: 42px;
+            height: 42px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .report-details {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .report-date-text {
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .report-size {
+            color: #64748b;
+            font-size: 13px;
+        }
+
+        .report-download-button {
+            display: block;
+            text-align: center;
+            text-decoration: none;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            background: #eff6ff;
+            color: #2563eb;
+        }
+
+        .report-download-button:hover {
+            background: #dbeafe;
+        }
+
+        .report-nav-button {
+            flex-shrink: 0;
+            width: 44px;
+            height: 60px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            color: #2563eb;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 28px;
+        }
+
+        .report-nav-button:hover:not(:disabled) {
+            background: #eff6ff;
+        }
+
+        .report-nav-button:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
+
+        .report-count {
+            text-align: center;
+            color: #64748b;
+            font-size: 13px;
+            margin-top: 22px;
+        }
         /* ================= LOW STOCK ================= */
 
         .low-stock-badge {
@@ -741,29 +862,75 @@
 
                     <div class="report-section">
 
-                        <div class="report-info">
+                        <!-- Header -->
+                        <div class="report-header">
 
-                            <h3>📄 Daily Report</h3>
+                            <div class="report-info">
+                                <h3>📄 Daily Report</h3>
 
-                            <p>
-                                Download today's CloudMart revenue report.
-                            </p>
+                                <p>
+                                    Download CloudMart revenue reports.
+                                </p>
+                            </div>
+
+                            <a
+                                href="{{ url_for('download_report') }}"
+                                class="download-button"
+                            >
+                                ⬇ Download Today
+                            </a>
 
                         </div>
 
-                        <a
-                            href="{{ url_for('download_report') }}"
-                            class="download-button"
-                        >
-                            Download Today
-                        </a>
+                        <div class="report-divider"></div>
+
+                        <!-- Previous Reports -->
+                        <div class="previous-reports">
+
+                            <h4>Previous Reports</h4>
+
+                            <p class="previous-reports-description">
+                                Browse and download previous daily reports (latest 5 shown).
+                            </p>
+
+                            <div class="reports-carousel">
+
+                                <button
+                                    type="button"
+                                    class="report-nav-button"
+                                    id="previousReports"
+                                    onclick="changeReportPage(-1)"
+                                >
+                                    ‹
+                                </button>
+
+                                <div id="reportList" class="report-list">
+                                </div>
+
+                                <button
+                                    type="button"
+                                    class="report-nav-button"
+                                    id="nextReports"
+                                    onclick="changeReportPage(1)"
+                                >
+                                    ›
+                                </button>
+
+                            </div>
+
+                            <div
+                                id="reportCount"
+                                class="report-count"
+                            ></div>
+
+                        </div>
 
                     </div>
 
                 </section>
 
             </section>
-
+        
 
             <!-- ================================================= -->
             <!-- PRODUCTS -->
@@ -1616,5 +1783,88 @@
 
     </script>
 
+<script>
+    const reports = {{ reports | tojson }};
+    let reportPage = 0;
+    const reportsPerPage = 5;
+
+    function renderReports() {
+        const reportList = document.getElementById("reportList");
+        const reportCount = document.getElementById("reportCount");
+
+        const start = reportPage * reportsPerPage;
+        const end = Math.min(
+            start + reportsPerPage,
+            reports.length
+        );
+
+        const pageReports = reports.slice(start, end);
+
+        reportList.innerHTML = "";
+
+        pageReports.forEach(report => {
+            const reportDiv = document.createElement("div");
+            reportDiv.className = "previous-report";
+
+            reportDiv.innerHTML = `
+                <div class="report-date">
+                    <div class="report-calendar">📅</div>
+
+                    <div class="report-details">
+                        <span class="report-date-text">
+                            ${report.date}
+                        </span>
+
+                        <span class="report-size">
+                            Daily Report
+                        </span>
+                    </div>
+                </div>
+
+                <a
+                    href="/report/download/${report.date}"
+                    class="report-download-button"
+                >
+                    ⬇ Download
+                </a>
+            `;
+
+            reportList.appendChild(reportDiv);
+        });
+
+        if (reports.length === 0) {
+            reportList.innerHTML = `
+                <p>No previous reports available.</p>
+            `;
+        }
+
+        if (reports.length > 0) {
+            reportCount.textContent =
+                `${start + 1} – ${end} of ${reports.length}`;
+        } else {
+            reportCount.textContent = "0 reports";
+        }
+
+        document.getElementById("previousReports").disabled =
+            reportPage === 0;
+
+        document.getElementById("nextReports").disabled =
+            end >= reports.length;
+    }
+
+    function changeReportPage(direction) {
+        const newPage = reportPage + direction;
+
+        if (
+            newPage >= 0 &&
+            newPage * reportsPerPage < reports.length
+        ) {
+            reportPage = newPage;
+            renderReports();
+        }
+    }
+
+    renderReports();
+</script>
 </body>
 </html>

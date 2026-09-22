@@ -118,14 +118,15 @@ def dashboard():
         order["created_at"] = format_ist_time(
             order.get("created_at")
         )
-
+    reports = get_previous_reports()
     return render_template(
         "dashboard.html",
         products=products,
-        orders=orders
+        orders=orders,
+        reports=reports
     )
 
-
+        
 @app.route("/api/customers")
 def customers():
     token = session.get("admin_token")
@@ -205,6 +206,46 @@ def customer(customer_id):
     )
 
 
+def get_previous_reports():
+    try:
+        response = s3.list_objects_v2(
+            Bucket=REPORTS_BUCKET,
+            Prefix="daily-report-"
+        )
+
+        reports = []
+
+        for obj in response.get("Contents", []):
+            key = obj["Key"]
+
+            if key.startswith("daily-report-") and key.endswith(".csv"):
+                date_part = key.replace("daily-report-", "").replace(".csv", "")
+
+                try:
+                    report_date = datetime.strptime(date_part, "%Y-%m-%d").date()
+
+                    reports.append({
+                        "date": report_date.strftime("%d-%m-%Y"),
+                        "key": key
+                    })
+
+                except ValueError:
+                    continue
+
+        reports.sort(
+            key=lambda report: datetime.strptime(
+                report["date"], "%d-%m-%Y"
+            ),
+            reverse=True
+        )
+
+        return reports
+
+    except Exception as e:
+        print("Error fetching previous reports:", e)
+        return []
+
+
 def get_today_report_key():
     today = datetime.now(IST).date().isoformat()
     return f"daily-report-{today}.csv"
@@ -275,6 +316,43 @@ def download_report():
 
     return redirect(url)
 
+
+@app.route("/report/download/<report_date>")
+def download_previous_report(report_date):
+    if not session.get("admin_token"):
+        return redirect(url_for("login"))
+
+    try:
+        report_date_obj = datetime.strptime(
+            report_date,
+            "%d-%m-%Y"
+        )
+
+        key = f"daily-report-{report_date_obj.strftime('%Y-%m-%d')}.csv"
+
+    except ValueError:
+        return "Invalid report date.", 400
+
+    try:
+        s3.head_object(
+            Bucket=REPORTS_BUCKET,
+            Key=key
+        )
+    except s3.exceptions.ClientError:
+        return "Report is not available.", 404
+
+    url = s3.generate_presigned_url(
+        "get_object",
+        Params={
+            "Bucket": REPORTS_BUCKET,
+            "Key": key,
+            "ResponseContentType": "text/csv",
+            "ResponseContentDisposition": f'attachment; filename="{key}"'
+        },
+        ExpiresIn=300
+    )
+
+    return redirect(url)
 
 @app.route("/logout")
 def logout():
