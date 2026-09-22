@@ -510,6 +510,44 @@
             font-size: 13px;
             margin-top: 22px;
         }
+
+        /* ================= PAGINATION ================= */
+
+        .pagination {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            padding: 18px 25px 22px;
+        }
+
+        .pagination-button {
+            width: 40px;
+            height: 40px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            color: #2563eb;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 22px;
+        }
+
+        .pagination-button:hover:not(:disabled) {
+            background: #eff6ff;
+        }
+
+        .pagination-button:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
+
+        .pagination-count {
+            color: #64748b;
+            font-size: 13px;
+            min-width: 110px;
+            text-align: center;
+        }
+
         /* ================= LOW STOCK ================= */
 
         .low-stock-badge {
@@ -1008,7 +1046,7 @@
 
                             </thead>
 
-                            <tbody>
+                            <tbody id="allProductsBody">
 
                                 {% for product in products %}
 
@@ -1044,6 +1082,8 @@
 
                     </div>
 
+                    <div id="allProductsPagination" class="pagination"></div>
+
                     {% else %}
 
                     <div class="empty">
@@ -1069,6 +1109,8 @@
                     </div>
 
                     <div id="lowStockProducts"></div>
+
+                    <div id="lowStockPagination" class="pagination"></div>
 
                 </section>
 
@@ -1188,6 +1230,8 @@
 
                     </div>
 
+                    <div id="ordersPagination" class="pagination"></div>
+
                     {% else %}
 
                     <div class="empty">
@@ -1256,6 +1300,8 @@
                         </div>
                     </div>
 
+                    <div id="customersPagination" class="pagination"></div>
+
                 </section>
 
             </section>
@@ -1273,6 +1319,59 @@
     <!-- ================= JAVASCRIPT ================= -->
 
     <script>
+
+        /* ================= PAGINATION HELPER ================= */
+
+        function renderPagination(container, currentPage, totalItems, onPageChange) {
+
+            if (!container || totalItems <= itemsPerPage) {
+                if (container) {
+                    container.innerHTML = "";
+                }
+                return;
+            }
+
+            const totalPages = Math.ceil(totalItems / itemsPerPage);
+            const start = currentPage * itemsPerPage + 1;
+            const end = Math.min((currentPage + 1) * itemsPerPage, totalItems);
+
+            container.innerHTML = `
+                <button
+                    type="button"
+                    class="pagination-button"
+                    ${currentPage === 0 ? "disabled" : ""}
+                    onclick="${container.id}Previous()"
+                >
+                    ‹
+                </button>
+
+                <span class="pagination-count">
+                    ${start} – ${end} of ${totalItems}
+                </span>
+
+                <button
+                    type="button"
+                    class="pagination-button"
+                    ${currentPage >= totalPages - 1 ? "disabled" : ""}
+                    onclick="${container.id}Next()"
+                >
+                    ›
+                </button>
+            `;
+
+            window[container.id + "Previous"] = function() {
+                if (currentPage > 0) {
+                    onPageChange(currentPage - 1);
+                }
+            };
+
+            window[container.id + "Next"] = function() {
+                if (currentPage < totalPages - 1) {
+                    onPageChange(currentPage + 1);
+                }
+            };
+        }
+
 
         /* ================= PAGE SWITCHING ================= */
 
@@ -1385,23 +1484,34 @@
                 return product.inventory <= 5;
             });
 
-        const lowStockContainer =
-            document.getElementById("lowStockProducts");
+        let lowStockPage = 0;
+        const itemsPerPage = 10;
 
-        if (lowStockProducts.length === 0) {
+        function renderLowStockProducts() {
 
-            lowStockContainer.innerHTML =
-                '<div class="empty">No low stock products.</div>';
+            const lowStockContainer =
+                document.getElementById("lowStockProducts");
 
-        } else {
+            const pagination =
+                document.getElementById("lowStockPagination");
+
+            if (lowStockProducts.length === 0) {
+
+                lowStockContainer.innerHTML =
+                    '<div class="empty">No low stock products.</div>';
+
+                pagination.innerHTML = "";
+                return;
+            }
+
+            const start = lowStockPage * itemsPerPage;
+            const end = Math.min(start + itemsPerPage, lowStockProducts.length);
+            const pageProducts = lowStockProducts.slice(start, end);
 
             let html = `
                 <div class="table-container">
-
                     <table>
-
                         <thead>
-
                             <tr>
                                 <th>Product ID</th>
                                 <th>Product Name</th>
@@ -1409,59 +1519,55 @@
                                 <th>Cost</th>
                                 <th>Description</th>
                             </tr>
-
                         </thead>
-
                         <tbody>
             `;
 
-            lowStockProducts.forEach(function(product) {
-
+            pageProducts.forEach(function(product) {
                 html += `
                     <tr>
-
-                        <td class="product-id">
-                            ${product.id}
-                        </td>
-
-                        <td>
-                            <strong>${product.name}</strong>
-                        </td>
-
+                        <td class="product-id">${product.id}</td>
+                        <td><strong>${product.name}</strong></td>
                         <td>
                             <span class="low-stock-badge">
                                 ${product.inventory} units
                             </span>
                         </td>
-
-                        <td class="price">
-                            ₹${product.cost.toFixed(2)}
-                        </td>
-
+                        <td class="price">₹${product.cost.toFixed(2)}</td>
                         <td class="description">
                             ${product.description || "No description available"}
                         </td>
-
                     </tr>
                 `;
-
             });
 
             html += `
                         </tbody>
-
                     </table>
-
                 </div>
             `;
 
             lowStockContainer.innerHTML = html;
+
+            renderPagination(
+                pagination,
+                lowStockPage,
+                lowStockProducts.length,
+                function(page) {
+                    lowStockPage = page;
+                    renderLowStockProducts();
+                }
+            );
         }
 
+        renderLowStockProducts();
 
-        /* ================= PRODUCT SEARCH ================= */
 
-        function filterProducts() {
+        /* ================= ALL PRODUCTS PAGINATION + SEARCH ================= */
+
+        let allProductsPage = 0;
+
+        function getFilteredProductRows() {
 
             const search =
                 document.getElementById("productSearch")
@@ -1470,9 +1576,9 @@
                 .toLowerCase();
 
             const rows =
-                document.querySelectorAll(".product-row");
+                Array.from(document.querySelectorAll("#allProductsBody .product-row"));
 
-            rows.forEach(function(row) {
+            return rows.filter(function(row) {
 
                 const productId =
                     row.querySelector(".product-id-value")
@@ -1480,27 +1586,116 @@
                     .trim()
                     .toLowerCase();
 
-                if (search === "" || productId === search) {
-                    row.style.display = "";
-                } else {
-                    row.style.display = "none";
-                }
+                return search === "" || productId === search;
+            });
+        }
 
+        function renderAllProducts() {
+
+            const rows =
+                Array.from(document.querySelectorAll("#allProductsBody .product-row"));
+
+            const filteredRows = getFilteredProductRows();
+            const total = filteredRows.length;
+            const start = allProductsPage * itemsPerPage;
+            const end = Math.min(start + itemsPerPage, total);
+
+            rows.forEach(function(row) {
+                row.style.display = "none";
             });
 
+            filteredRows.slice(start, end).forEach(function(row) {
+                row.style.display = "";
+            });
+
+            renderPagination(
+                document.getElementById("allProductsPagination"),
+                allProductsPage,
+                total,
+                function(page) {
+                    allProductsPage = page;
+                    renderAllProducts();
+                }
+            );
+        }
+
+        function filterProducts() {
+            allProductsPage = 0;
+            renderAllProducts();
         }
 
 
         /* ================= CUSTOMER DETAILS SEARCH ================= */
 
-        function handleCustomerSearchKey(event) {
+        let allCustomers = [];
+        let customersPage = 0;
 
+        function renderCustomers(customers) {
+
+            const result =
+                document.getElementById("customerResult");
+
+            const pagination =
+                document.getElementById("customersPagination");
+
+            if (customers.length === 0) {
+                result.innerHTML =
+                    '<div class="empty">No customers found.</div>';
+                pagination.innerHTML = "";
+                return;
+            }
+
+            const start = customersPage * itemsPerPage;
+            const end = Math.min(start + itemsPerPage, customers.length);
+            const pageCustomers = customers.slice(start, end);
+
+            let html = `
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Customer ID</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            pageCustomers.forEach(function(customer) {
+                html += `
+                    <tr>
+                        <td class="product-id">${customer.customer_id}</td>
+                        <td><strong>${customer.name || "-"}</strong></td>
+                        <td>${customer.email || "-"}</td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            result.innerHTML = html;
+
+            renderPagination(
+                pagination,
+                customersPage,
+                customers.length,
+                function(page) {
+                    customersPage = page;
+                    renderCustomers(allCustomers);
+                }
+            );
+        }
+
+        function handleCustomerSearchKey(event) {
             if (event.key === "Enter") {
                 searchCustomer();
             }
-
         }
-
 
         async function searchCustomer() {
 
@@ -1522,10 +1717,9 @@
                 if (customerId) {
 
                     if (!/^\d+$/.test(customerId)) {
-
                         result.innerHTML =
                             '<div class="empty">Please enter a valid Customer ID.</div>';
-
+                        document.getElementById("customersPagination").innerHTML = "";
                         return;
                     }
 
@@ -1533,102 +1727,39 @@
                         `/api/customer/${encodeURIComponent(customerId)}`;
 
                 } else {
-
                     url = "/api/customers";
-
                 }
 
                 const response = await fetch(url);
-
                 const data = await response.json();
 
                 if (!response.ok) {
-
                     result.innerHTML =
                         `<div class="empty">${data.message || "Unable to load customers."}</div>`;
-
+                    document.getElementById("customersPagination").innerHTML = "";
                     return;
                 }
 
                 let customers = [];
 
                 if (data.customers) {
-
                     customers = data.customers;
-
                 } else if (data.customer) {
-
                     customers = [data.customer];
-
                 }
 
-                if (customers.length === 0) {
-
-                    result.innerHTML =
-                        '<div class="empty">No customers found.</div>';
-
-                    return;
-                }
-
-                let html = `
-                    <div class="table-container">
-
-                        <table>
-
-                            <thead>
-
-                                <tr>
-                                    <th>Customer ID</th>
-                                    <th>Name</th>
-                                    <th>Email</th>
-                                </tr>
-
-                            </thead>
-
-                            <tbody>
-                `;
-
-                customers.forEach(function(customer) {
-
-                    html += `
-                        <tr>
-
-                            <td class="product-id">
-                                ${customer.customer_id}
-                            </td>
-
-                            <td>
-                                <strong>${customer.name || "-"}</strong>
-                            </td>
-
-                            <td>
-                                ${customer.email || "-"}
-                            </td>
-
-                        </tr>
-                    `;
-
-                });
-
-                html += `
-                            </tbody>
-
-                        </table>
-
-                    </div>
-                `;
-
-                result.innerHTML = html;
+                allCustomers = customers;
+                customersPage = 0;
+                renderCustomers(allCustomers);
 
             } catch (error) {
 
                 result.innerHTML =
                     '<div class="empty">Unable to connect to the CloudMart dashboard.</div>';
 
+                document.getElementById("customersPagination").innerHTML = "";
             }
-
         }
-
 
         async function loadAllCustomers() {
 
@@ -1654,87 +1785,31 @@
                     await response.json();
 
                 if (!response.ok) {
-
                     result.innerHTML =
                         `<div class="empty">${data.message || "Unable to load customers."}</div>`;
-
+                    document.getElementById("customersPagination").innerHTML = "";
                     return;
                 }
 
-                const customers =
-                    data.customers || [];
-
-                if (customers.length === 0) {
-
-                    result.innerHTML =
-                        '<div class="empty">No customers found.</div>';
-
-                    return;
-                }
-
-                let html = `
-                    <div class="table-container">
-
-                        <table>
-
-                            <thead>
-
-                                <tr>
-                                    <th>Customer ID</th>
-                                    <th>Name</th>
-                                    <th>Email</th>
-                                </tr>
-
-                            </thead>
-
-                            <tbody>
-                `;
-
-                customers.forEach(function(customer) {
-
-                    html += `
-                        <tr>
-
-                            <td class="product-id">
-                                ${customer.customer_id}
-                            </td>
-
-                            <td>
-                                <strong>${customer.name || "-"}</strong>
-                            </td>
-
-                            <td>
-                                ${customer.email || "-"}
-                            </td>
-
-                        </tr>
-                    `;
-
-                });
-
-                html += `
-                            </tbody>
-
-                        </table>
-
-                    </div>
-                `;
-
-                result.innerHTML = html;
+                allCustomers = data.customers || [];
+                customersPage = 0;
+                renderCustomers(allCustomers);
 
             } catch (error) {
 
                 result.innerHTML =
                     '<div class="empty">Unable to connect to the CloudMart dashboard.</div>';
 
+                document.getElementById("customersPagination").innerHTML = "";
             }
-
         }
 
 
-        /* ================= CUSTOMER SEARCH ================= */
+        /* ================= ORDERS PAGINATION + SEARCH ================= */
 
-        function filterOrders() {
+        let ordersPage = 0;
+
+        function getFilteredOrderRows() {
 
             const search =
                 document.getElementById("customerSearch")
@@ -1743,9 +1818,9 @@
                 .toLowerCase();
 
             const rows =
-                document.querySelectorAll(".order-row");
+                Array.from(document.querySelectorAll("#ordersTableBody .order-row"));
 
-            rows.forEach(function(row) {
+            return rows.filter(function(row) {
 
                 const customerId =
                     row.querySelector(".customer-id")
@@ -1753,24 +1828,51 @@
                     .trim()
                     .toLowerCase();
 
-                if (search === "" || customerId.includes(search)) {
+                return search === "" || customerId.includes(search);
+            });
+        }
 
-                    row.style.display = "";
+        function renderOrders() {
 
-                } else {
+            const rows =
+                Array.from(document.querySelectorAll("#ordersTableBody .order-row"));
 
-                    row.style.display = "none";
+            const filteredRows = getFilteredOrderRows();
+            const total = filteredRows.length;
+            const start = ordersPage * itemsPerPage;
+            const end = Math.min(start + itemsPerPage, total);
 
-                }
-
+            rows.forEach(function(row) {
+                row.style.display = "none";
             });
 
+            filteredRows.slice(start, end).forEach(function(row) {
+                row.style.display = "";
+            });
+
+            renderPagination(
+                document.getElementById("ordersPagination"),
+                ordersPage,
+                total,
+                function(page) {
+                    ordersPage = page;
+                    renderOrders();
+                }
+            );
+        }
+
+        function filterOrders() {
+            ordersPage = 0;
+            renderOrders();
         }
 
 
         /* ================= LOAD CUSTOMERS ON PAGE LOAD ================= */
 
         document.addEventListener("DOMContentLoaded", function() {
+
+            renderAllProducts();
+            renderOrders();
 
             const customerSection =
                 document.getElementById("customers");
