@@ -750,13 +750,14 @@ def create_order(event):
                         "unit_price": unit_price
                     }
                 )
-
             # =================================================
             # DEDUCT INVENTORY
             #
             # Inventory is deducted during order creation because
             # the order is automatically confirmed.
             # =================================================
+
+            inventory_changes = []
 
             for item in order_items:
 
@@ -772,6 +773,28 @@ def create_order(event):
                         item["quantity"],
                         item["product_id"]
                     )
+                )
+
+                cursor.execute(
+                    """
+                    SELECT quantity
+                    FROM inventory
+                    WHERE product_id = %s
+                    """,
+                    (
+                        item["product_id"],
+                    )
+                )
+
+                remaining_quantity = cursor.fetchone()["quantity"]
+
+                inventory_changes.append(
+                    {
+                        "product_id": item["product_id"],
+                        "quantity": remaining_quantity,
+                        "low_stock_threshold": 5,
+                        "low_stock": remaining_quantity < 5
+                    }
                 )
 
             # =================================================
@@ -868,24 +891,38 @@ def create_order(event):
         # COMMIT
         # =====================================================
 
-        connection.commit()
-
         # =====================================================
         # PUBLISH EVENT
         # =====================================================
 
+        connection.commit()
+
+        # =================================================
+        # PUBLISH INVENTORY CHANGED EVENTS
+        # =================================================
+        for inventory_change in inventory_changes:
+
+            events.put_events(
+                Entries=[
+                    {
+                        "EventBusName": EVENT_BUS_NAME,
+                        "Source": "cloudmart.product",
+                        "DetailType": "Inventory Changed",
+                        "Detail": json.dumps(inventory_change)
+                    }
+                ]
+            )
+
+        # =================================================
+        # PUBLISH ORDER CONFIRMED EVENT
+        # =================================================
         publish_order_event(
             "OrderConfirmed",
             {
                 "order_id": order_id,
-                "customer_id": customer_id,
-                "customer_email": customer["email"],
-                "status": "CONFIRMED",
-                "total_amount": total_amount,
-                "items": order_items
+                "customer_id": customer_id
             }
         )
-        #publish_metric("OrdersPlaced")
 
         # =====================================================
         # RESPONSE
@@ -960,8 +997,6 @@ def get_order(event, order_id):
     # --------------------------------------------------------
     # If order does not exist
     # --------------------------------------------------------
-
-    if authorization_result is None:
 
         return response(
             404,
