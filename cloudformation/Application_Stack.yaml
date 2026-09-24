@@ -4,9 +4,11 @@ Transform:
   - AWS::Serverless-2016-10-31
 
 Description: >
-  CloudMart Milestone 3 Application Stack -
+  CloudMart Application Stack -
   API Gateway, Lambda Authorizer, Product service,
-  EventBridge and SNS low-stock alerts.
+  Customer service, Login service, Order service,
+  SQS failure queue, EventBridge, SNS alerts,
+  Dashboard Lambda and Daily Report Lambda.
 
 
 # ============================================================
@@ -28,6 +30,10 @@ Parameters:
     Type: String
     Description: Email address for CloudMart low-stock alerts
 
+  SenderEmail:
+    Type: String
+    Description: Verified SES sender email for order notifications
+
 
 # ============================================================
 # RESOURCES
@@ -41,18 +47,13 @@ Resources:
 
   PyMySQLLayer:
     Type: AWS::Serverless::LayerVersion
-
     Properties:
       LayerName: !Sub cloudmart-${Environment}-pymysql
-
       Description: >
         Shared PyMySQL dependency for CloudMart Lambda functions
-
       ContentUri: ../layers/pymysql/
-
       CompatibleRuntimes:
         - python3.12
-
     Metadata:
       BuildMethod: python3.12
 
@@ -65,7 +66,6 @@ Resources:
     Type: AWS::Serverless::Function
 
     Properties:
-
       FunctionName: !Sub cloudmart-${Environment}-authorizer
 
       CodeUri: ../lambda/authorizer/
@@ -87,6 +87,9 @@ Resources:
 
           AUTH_TOKEN_PARAMETER:
             !Sub /cloudmart/${Environment}/auth/token
+
+          JWT_SECRET_PARAMETER:
+            !Sub /cloudmart/${Environment}/auth/jwt-secret
 
 
   # ==========================================================
@@ -161,7 +164,6 @@ Resources:
             Method: post
             PayloadFormatVersion: "2.0"
 
-
         # ======================================================
         # GET /products
         # ======================================================
@@ -173,7 +175,6 @@ Resources:
             Path: /products
             Method: get
             PayloadFormatVersion: "2.0"
-
 
         # ======================================================
         # GET /products/{productId}
@@ -187,7 +188,6 @@ Resources:
             Method: get
             PayloadFormatVersion: "2.0"
 
-
         # ======================================================
         # PUT /products/{productId}
         # ======================================================
@@ -200,7 +200,6 @@ Resources:
             Method: put
             PayloadFormatVersion: "2.0"
 
-
         # ======================================================
         # DELETE /products/{productId}
         # ======================================================
@@ -212,6 +211,751 @@ Resources:
             Path: /products/{productId}
             Method: delete
             PayloadFormatVersion: "2.0"
+
+
+  # ==========================================================
+  # CUSTOMER LAMBDA
+  # ==========================================================
+
+  CustomerLambda:
+    Type: AWS::Serverless::Function
+
+    Properties:
+
+      FunctionName: !Sub cloudmart-${Environment}-customer
+
+      CodeUri: ../lambda/customer/
+
+      Handler: customer_lambda.lambda_handler
+
+      Runtime: python3.12
+
+      Timeout: 30
+
+      MemorySize: 256
+
+      Role:
+        Fn::ImportValue:
+          !Sub CloudMart-${Environment}-CustomerLambdaRoleArn
+
+      Layers:
+        - !Ref PyMySQLLayer
+
+      VpcConfig:
+
+        SecurityGroupIds:
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-LambdaSecurityGroupId
+
+        SubnetIds:
+
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-PrivateSubnet1Id
+
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-PrivateSubnet2Id
+
+      Environment:
+        Variables:
+
+          RDS_HOST:
+            Fn::ImportValue:
+              !Sub CloudMart-${Environment}-RDSEndpoint
+
+          DB_NAME: cloudmart
+
+          DB_USER: admin
+
+          DB_PASSWORD_PARAMETER:
+            !Sub /cloudmart/${Environment}/db/password
+
+      Events:
+
+        # ======================================================
+        # POST /customers
+        # ======================================================
+
+        CreateCustomer:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CloudMartApi
+            Path: /customers
+            Method: post
+            PayloadFormatVersion: "2.0"
+            Auth:
+              Authorizer: NONE
+
+        # ======================================================
+        # GET /customers/{customerId}
+        # ======================================================
+
+        GetCustomer:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CloudMartApi
+            Path: /customers/{customerId}
+            Method: get
+            PayloadFormatVersion: "2.0"
+
+        # ======================================================
+        # PUT /customers/{customerId}
+        # ======================================================
+
+        UpdateCustomer:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CloudMartApi
+            Path: /customers/{customerId}
+            Method: put
+            PayloadFormatVersion: "2.0"
+
+        # ======================================================
+        # DELETE /customers/{customerId}
+        # ======================================================
+
+        DeleteCustomer:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CloudMartApi
+            Path: /customers/{customerId}
+            Method: delete
+            PayloadFormatVersion: "2.0"
+
+
+  # ==========================================================
+  # LOGIN LAMBDA
+  # ==========================================================
+
+  LoginLambda:
+    Type: AWS::Serverless::Function
+
+    Properties:
+
+      FunctionName: !Sub cloudmart-${Environment}-login
+
+      CodeUri: ../lambda/login/
+
+      Handler: login_lambda.lambda_handler
+
+      Runtime: python3.12
+
+      Timeout: 30
+
+      MemorySize: 256
+
+      Role:
+        Fn::ImportValue:
+          !Sub CloudMart-${Environment}-LoginLambdaRoleArn
+
+      Layers:
+        - !Ref PyMySQLLayer
+
+      VpcConfig:
+
+        SecurityGroupIds:
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-LambdaSecurityGroupId
+
+        SubnetIds:
+
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-PrivateSubnet1Id
+
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-PrivateSubnet2Id
+
+      Environment:
+        Variables:
+
+          RDS_HOST:
+            Fn::ImportValue:
+              !Sub CloudMart-${Environment}-RDSEndpoint
+
+          DB_NAME: cloudmart
+
+          DB_USER: admin
+
+          DB_PASSWORD_PARAMETER:
+            !Sub /cloudmart/${Environment}/db/password
+
+          JWT_SECRET_PARAMETER:
+            !Sub /cloudmart/${Environment}/auth/jwt-secret
+
+      Events:
+
+        Login:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CloudMartApi
+            Path: /login
+            Method: post
+            PayloadFormatVersion: "2.0"
+            Auth:
+              Authorizer: NONE
+
+
+  # ==========================================================
+  # DATABASE INITIALIZATION LAMBDA
+  # ==========================================================
+
+  DBInitLambda:
+    Type: AWS::Serverless::Function
+
+    Properties:
+
+      FunctionName: !Sub cloudmart-${Environment}-db-init
+
+      CodeUri: ../lambda/db_init/
+
+      Handler: db_init_lambda.lambda_handler
+
+      Runtime: python3.12
+
+      Timeout: 60
+
+      MemorySize: 256
+
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ssm:GetParameter
+              Resource:
+                Fn::Sub:
+                  - arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/cloudmart/${Environment}/db/password
+                  - {}
+
+      Layers:
+        - !Ref PyMySQLLayer
+
+      VpcConfig:
+
+        SecurityGroupIds:
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-LambdaSecurityGroupId
+
+        SubnetIds:
+
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-PrivateSubnet1Id
+
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-PrivateSubnet2Id
+
+      Environment:
+
+        Variables:
+
+          RDS_HOST:
+            Fn::ImportValue:
+              !Sub CloudMart-${Environment}-RDSEndpoint
+
+          DB_NAME: cloudmart
+
+          DB_USER: admin
+
+          DB_PASSWORD_PARAMETER:
+            !Sub /cloudmart/${Environment}/db/password
+
+
+  # ==========================================================
+  # ORDER LAMBDA
+  # ==========================================================
+
+  OrderLambda:
+    Type: AWS::Serverless::Function
+
+    Properties:
+
+      FunctionName: !Sub cloudmart-${Environment}-order
+
+      CodeUri: ../lambda/order/
+
+      Handler: order_lambda.lambda_handler
+
+      Runtime: python3.12
+
+      Timeout: 30
+
+      MemorySize: 256
+
+      Role:
+        Fn::ImportValue:
+          !Sub CloudMart-${Environment}-OrderLambdaRoleArn
+
+      Layers:
+        - !Ref PyMySQLLayer
+
+      VpcConfig:
+
+        SecurityGroupIds:
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-LambdaSecurityGroupId
+
+        SubnetIds:
+
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-PrivateSubnet1Id
+
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-PrivateSubnet2Id
+
+      Environment:
+        Variables:
+
+          RDS_HOST:
+            Fn::ImportValue:
+              !Sub CloudMart-${Environment}-RDSEndpoint
+
+          DB_NAME: cloudmart
+
+          DB_USER: admin
+
+          DB_PASSWORD_PARAMETER:
+            !Sub /cloudmart/${Environment}/db/password
+
+          EVENT_BUS_NAME: default
+
+          ORDER_FAILURE_QUEUE_URL:
+            !Ref OrderFailureQueue
+
+          ORDER_FAILURE_QUEUE_NAME:
+            !Sub cloudmart-${Environment}-order-failures
+
+      Events:
+
+        # ======================================================
+        # POST /orders
+        # ======================================================
+
+        CreateOrder:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CloudMartApi
+            Path: /orders
+            Method: post
+            PayloadFormatVersion: "2.0"
+
+        # ======================================================
+        # GET /orders/{orderId}
+        # ======================================================
+
+        GetOrder:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CloudMartApi
+            Path: /orders/{orderId}
+            Method: get
+            PayloadFormatVersion: "2.0"
+
+        # ======================================================
+        # GET /orders?customerId=X
+        # ======================================================
+
+        GetCustomerOrders:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CloudMartApi
+            Path: /orders
+            Method: get
+            PayloadFormatVersion: "2.0"
+
+        # ======================================================
+        # PUT /orders/{orderId}
+        # ======================================================
+
+        UpdateOrder:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CloudMartApi
+            Path: /orders/{orderId}
+            Method: put
+            PayloadFormatVersion: "2.0"
+
+        # ======================================================
+        # PATCH /orders/{orderId}
+        # ======================================================
+
+        UpdateOrderItems:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CloudMartApi
+            Path: /orders/{orderId}
+            Method: patch
+            PayloadFormatVersion: "2.0"
+
+        # ======================================================
+        # PATCH /orders/{orderId}/cancel
+        # ======================================================
+
+        CancelOrder:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CloudMartApi
+            Path: /orders/{orderId}/cancel
+            Method: patch
+            PayloadFormatVersion: "2.0"
+
+
+  # ==========================================================
+  # NOTIFICATION LAMBDA
+  # ==========================================================
+
+  NotificationLambda:
+    Type: AWS::Serverless::Function
+
+    Properties:
+
+      FunctionName: !Sub cloudmart-${Environment}-notification
+
+      CodeUri: ../lambda/notification/
+
+      Handler: notification_lambda.lambda_handler
+
+      Runtime: python3.12
+
+      Timeout: 30
+
+      MemorySize: 128
+
+      Role:
+        Fn::ImportValue:
+          !Sub CloudMart-${Environment}-NotificationLambdaRoleArn
+
+      Layers:
+        - !Ref PyMySQLLayer
+
+      VpcConfig:
+
+        SecurityGroupIds:
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-LambdaSecurityGroupId
+
+        SubnetIds:
+
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-PrivateSubnet1Id
+
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-PrivateSubnet2Id
+
+      Environment:
+        Variables:
+
+          SENDER_EMAIL:
+            !Ref SenderEmail
+
+          RDS_HOST:
+            Fn::ImportValue:
+              !Sub CloudMart-${Environment}-RDSEndpoint
+
+          DB_NAME: cloudmart
+
+          DB_USER: admin
+
+          DB_PASSWORD_PARAMETER:
+            !Sub /cloudmart/${Environment}/db/password
+
+
+  # ==========================================================
+  # MILESTONE 5 DASHBOARD LAMBDA
+  # ==========================================================
+
+  DashboardLambda:
+    Type: AWS::Serverless::Function
+
+    Properties:
+
+      FunctionName: !Sub cloudmart-${Environment}-dashboard
+
+      CodeUri: ../lambda/dashboard/
+
+      Handler: dashboard_lambda.lambda_handler
+
+      Runtime: python3.12
+
+      Timeout: 30
+
+      MemorySize: 256
+
+      Role:
+        Fn::ImportValue:
+          !Sub CloudMart-${Environment}-DashboardLambdaRoleArn
+
+      Layers:
+        - !Ref PyMySQLLayer
+
+      VpcConfig:
+
+        SubnetIds:
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-PrivateSubnet1Id
+
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-PrivateSubnet2Id
+
+        SecurityGroupIds:
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-LambdaSecurityGroupId
+
+      Environment:
+        Variables:
+
+          RDS_HOST:
+            Fn::ImportValue:
+              !Sub CloudMart-${Environment}-RDSEndpoint
+
+          DB_NAME: cloudmart
+
+          DB_USER: admin
+
+          DB_PASSWORD_PARAMETER:
+            !Sub /cloudmart/${Environment}/db/password
+
+      Events:
+
+        # ======================================================
+        # GET /dashboard/products
+        # ======================================================
+
+        GetDashboardProducts:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CloudMartApi
+            Path: /dashboard/products
+            Method: get
+            PayloadFormatVersion: "2.0"
+
+        # ======================================================
+        # GET /dashboard/orders
+        # ======================================================
+
+        GetDashboardOrders:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CloudMartApi
+            Path: /dashboard/orders
+            Method: get
+            PayloadFormatVersion: "2.0"
+
+
+        GetDashboardCustomers:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CloudMartApi
+            Path: /dashboard/customers
+            Method: get
+            PayloadFormatVersion: "2.0"
+
+
+  AlarmNotificationLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub cloudmart-${Environment}-alarm-notification
+      CodeUri: ../lambda/alarm_notification/
+      Handler: alarm_notification_lambda.lambda_handler
+      Runtime: python3.12
+      Timeout: 30
+      MemorySize: 128
+      Role:
+        Fn::ImportValue:
+          !Sub CloudMart-${Environment}-DashboardLambdaRoleArn
+      Environment:
+        Variables:
+          MONITORING_TOPIC_ARN:
+            !Sub arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:cloudmart-${Environment}-formatted-monitoring
+
+
+  # ==========================================================
+  # MILESTONE 5 DAILY REPORT LAMBDA
+  # ==========================================================
+
+  DailyReportLambda:
+    Type: AWS::Serverless::Function
+
+    Properties:
+
+      FunctionName: !Sub cloudmart-${Environment}-daily-report
+
+      CodeUri: ../lambda/daily_report/
+
+      Handler: daily_report_lambda.lambda_handler
+
+      Runtime: python3.12
+
+      Timeout: 60
+
+      MemorySize: 256
+
+      Role:
+        Fn::ImportValue:
+          !Sub CloudMart-${Environment}-DailyReportLambdaRoleArn
+
+      Layers:
+        - !Ref PyMySQLLayer
+
+      VpcConfig:
+
+        SubnetIds:
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-PrivateSubnet1Id
+
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-PrivateSubnet2Id
+
+        SecurityGroupIds:
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-LambdaSecurityGroupId
+
+      Environment:
+        Variables:
+
+          RDS_HOST:
+            Fn::ImportValue:
+              !Sub CloudMart-${Environment}-RDSEndpoint
+
+          DB_NAME: cloudmart
+
+          DB_USER: admin
+
+          DB_PASSWORD_PARAMETER:
+            !Sub /cloudmart/${Environment}/db/password
+
+          REPORTS_BUCKET:
+            Fn::ImportValue:
+              !Sub CloudMart-${Environment}-ReportsBucketName
+
+      Events:
+
+        DailyReportSchedule:
+          Type: ScheduleV2
+          Properties:
+            ScheduleExpression: "cron(59 23 * * ? *)"
+            ScheduleExpressionTimezone: "Asia/Kolkata"
+            Name: !Sub cloudmart-${Environment}-daily-report-schedule
+            Description: Daily CloudMart report generation
+            State: ENABLED
+
+
+  # ==========================================================
+  # MILESTONE 5 MONITORING LAMBDA
+  # ==========================================================
+
+  LowStockMetricsLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub cloudmart-${Environment}-low-stock-metrics
+      CodeUri: ../lambda/monitoring/
+      Handler: monitoring_lambda.lambda_handler
+      Runtime: python3.12
+      Timeout: 10
+      MemorySize: 128
+      Role:
+        Fn::ImportValue:
+          !Sub CloudMart-${Environment}-LowStockMetricsLambdaRoleArn
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+
+
+  # ==========================================================
+  # LOW STOCK METRICS RULE
+  # ==========================================================
+
+  LowStockMetricsRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub cloudmart-${Environment}-low-stock-metrics
+      State: ENABLED
+      EventPattern:
+        source:
+          - cloudmart.product
+        detail-type:
+          - Inventory Changed
+        detail:
+          low_stock:
+            - true
+      Targets:
+        - Arn: !GetAtt LowStockMetricsLambda.Arn
+          Id: LowStockMetricsLambdaTarget
+
+  LowStockMetricsLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref LowStockMetricsLambda
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt LowStockMetricsRule.Arn
+
+
+  # ==========================================================
+  # ORDERS PLACED METRICS RULE
+  # ==========================================================
+
+  OrdersPlacedMetricsRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub cloudmart-${Environment}-orders-placed-metrics
+      State: ENABLED
+      EventPattern:
+        source:
+          - cloudmart.orders
+        detail-type:
+          - OrderConfirmed
+      Targets:
+        - Arn: !GetAtt LowStockMetricsLambda.Arn
+          Id: OrdersPlacedMetricsLambdaTarget
+
+  OrdersPlacedMetricsLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref LowStockMetricsLambda
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt OrdersPlacedMetricsRule.Arn
+
+
+  # ==========================================================
+  # ORDERS FAILED METRICS RULE
+  # ==========================================================
+
+  OrdersFailedMetricsRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub cloudmart-${Environment}-orders-failed-metrics
+      State: ENABLED
+      EventPattern:
+        source:
+          - cloudmart.orders
+        detail-type:
+          - OrderFailed
+      Targets:
+        - Arn: !GetAtt LowStockMetricsLambda.Arn
+          Id: OrdersFailedMetricsLambdaTarget
+
+  OrdersFailedMetricsLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref LowStockMetricsLambda
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt OrdersFailedMetricsRule.Arn
+
+
+  # ==========================================================
+  # ORDER FAILURE SQS QUEUE
+  # ==========================================================
+
+  OrderFailureQueue:
+    Type: AWS::SQS::Queue
+
+    Properties:
+
+      QueueName: !Sub cloudmart-${Environment}-order-failures
+
+      VisibilityTimeout: 60
+
+      MessageRetentionPeriod: 1209600
 
 
   # ==========================================================
@@ -332,10 +1076,22 @@ Resources:
             - true
 
       Targets:
-
         - Arn: !Ref LowStockTopic
-
           Id: LowStockSNSTarget
+          InputTransformer:
+            InputPathsMap:
+              productId: $.detail.product_id
+              quantity: $.detail.quantity
+              threshold: $.detail.low_stock_threshold
+            InputTemplate: |
+              "CLOUDMART LOW STOCK ALERT"
+              "Product ID: <productId>"
+              "Current Inventory: <quantity>"
+              "Low Stock Threshold: <threshold>"
+              "Status: LOW STOCK"
+              "The product inventory has fallen below the configured low-stock threshold."
+              "Please review the inventory and replenish stock if required."
+              "CloudMart Inventory Monitoring"
 
 
   # ==========================================================
@@ -376,6 +1132,230 @@ Resources:
                   - !GetAtt LowStockRule.Arn
 
 
+  # ==========================================================
+  # EVENTBRIDGE ORDER RULES
+  # ==========================================================
+
+  OrderConfirmedRule:
+    Type: AWS::Events::Rule
+
+    Properties:
+
+      Name: !Sub cloudmart-${Environment}-order-confirmed
+
+      Description: >
+        Captures CloudMart order confirmation events
+
+      State: ENABLED
+
+      EventPattern:
+
+        source:
+          - cloudmart.orders
+
+        detail-type:
+          - OrderConfirmed
+
+      Targets:
+
+        - Arn: !GetAtt NotificationLambda.Arn
+          Id: OrderConfirmedNotificationTarget
+
+
+  OrderProcessingRule:
+    Type: AWS::Events::Rule
+
+    Properties:
+
+      Name: !Sub cloudmart-${Environment}-order-processing
+
+      Description: >
+        Captures CloudMart order processing events
+
+      State: ENABLED
+
+      EventPattern:
+
+        source:
+          - cloudmart.orders
+
+        detail-type:
+          - OrderProcessing
+
+      Targets:
+
+        - Arn: !GetAtt NotificationLambda.Arn
+          Id: OrderProcessingNotificationTarget
+
+
+  OrderShippedRule:
+    Type: AWS::Events::Rule
+
+    Properties:
+
+      Name: !Sub cloudmart-${Environment}-order-shipped
+
+      Description: >
+        Captures CloudMart order shipment events
+
+      State: ENABLED
+
+      EventPattern:
+
+        source:
+          - cloudmart.orders
+
+        detail-type:
+          - OrderShipped
+
+      Targets:
+
+        - Arn: !GetAtt NotificationLambda.Arn
+          Id: OrderShippedNotificationTarget
+
+
+  OrderDeliveredRule:
+    Type: AWS::Events::Rule
+
+    Properties:
+
+      Name: !Sub cloudmart-${Environment}-order-delivered
+
+      Description: >
+        Captures CloudMart order delivery events
+
+      State: ENABLED
+
+      EventPattern:
+
+        source:
+          - cloudmart.orders
+
+        detail-type:
+          - OrderDelivered
+
+      Targets:
+
+        - Arn: !GetAtt NotificationLambda.Arn
+          Id: OrderDeliveredNotificationTarget
+
+
+  OrderCancelledRule:
+    Type: AWS::Events::Rule
+
+    Properties:
+
+      Name: !Sub cloudmart-${Environment}-order-cancelled
+
+      Description: >
+        Captures CloudMart order cancellation events
+
+      State: ENABLED
+
+      EventPattern:
+
+        source:
+          - cloudmart.orders
+
+        detail-type:
+          - OrderCancelled
+
+      Targets:
+
+        - Arn: !GetAtt NotificationLambda.Arn
+          Id: OrderCancelledNotificationTarget
+
+
+  OrderItemChangedRule:
+    Type: AWS::Events::Rule
+
+    Properties:
+
+      Name: !Sub cloudmart-${Environment}-order-item-changed
+
+      Description: >
+        Captures CloudMart order item change events
+
+      State: ENABLED
+
+      EventPattern:
+
+        source:
+          - cloudmart.orders
+
+        detail-type:
+          - OrderItemChanged
+
+      Targets:
+
+        - Arn: !GetAtt NotificationLambda.Arn
+          Id: OrderItemChangedNotificationTarget
+
+
+  # ==========================================================
+  # EVENTBRIDGE ORDER RULE -> NOTIFICATION LAMBDA PERMISSIONS
+  # ==========================================================
+
+  OrderConfirmedNotificationPermission:
+    Type: AWS::Lambda::Permission
+
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt NotificationLambda.Arn
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt OrderConfirmedRule.Arn
+
+
+  OrderProcessingNotificationPermission:
+    Type: AWS::Lambda::Permission
+
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt NotificationLambda.Arn
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt OrderProcessingRule.Arn
+
+
+  OrderShippedNotificationPermission:
+    Type: AWS::Lambda::Permission
+
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt NotificationLambda.Arn
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt OrderShippedRule.Arn
+
+
+  OrderDeliveredNotificationPermission:
+    Type: AWS::Lambda::Permission
+
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt NotificationLambda.Arn
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt OrderDeliveredRule.Arn
+
+
+  OrderCancelledNotificationPermission:
+    Type: AWS::Lambda::Permission
+
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt NotificationLambda.Arn
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt OrderCancelledRule.Arn
+
+
+  OrderItemChangedNotificationPermission:
+    Type: AWS::Lambda::Permission
+
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt NotificationLambda.Arn
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt OrderItemChangedRule.Arn
+
+
 # ============================================================
 # OUTPUTS
 # ============================================================
@@ -401,13 +1381,58 @@ Outputs:
       Name: !Sub CloudMart-${Environment}-ProductLambdaArn
 
 
+  CustomerLambdaArn:
+    Description: Customer Lambda ARN
+
+    Value: !GetAtt CustomerLambda.Arn
+
+    Export:
+      Name: !Sub CloudMart-${Environment}-CustomerLambdaArn
+
+
+  OrderLambdaArn:
+    Description: Order Lambda ARN
+
+    Value: !GetAtt OrderLambda.Arn
+
+    Export:
+      Name: !Sub CloudMart-${Environment}-OrderLambdaArn
+
+
   AuthorizerLambdaArn:
-    Description: Lambda Authorizer ARN
+    Description: Authorizer Lambda ARN
 
     Value: !GetAtt AuthorizerLambda.Arn
 
     Export:
       Name: !Sub CloudMart-${Environment}-AuthorizerLambdaArn
+
+
+  NotificationLambdaArn:
+    Description: Notification Lambda ARN
+
+    Value: !GetAtt NotificationLambda.Arn
+
+    Export:
+      Name: !Sub CloudMart-${Environment}-NotificationLambdaArn
+
+
+  DashboardLambdaArn:
+    Description: Milestone 5 Dashboard Lambda ARN
+
+    Value: !GetAtt DashboardLambda.Arn
+
+    Export:
+      Name: !Sub CloudMart-${Environment}-DashboardLambdaArn
+
+
+  DailyReportLambdaArn:
+    Description: Milestone 5 Daily Report Lambda ARN
+
+    Value: !GetAtt DailyReportLambda.Arn
+
+    Export:
+      Name: !Sub CloudMart-${Environment}-DailyReportLambdaArn
 
 
   LowStockTopicArn:
@@ -417,3 +1442,21 @@ Outputs:
 
     Export:
       Name: !Sub CloudMart-${Environment}-LowStockTopicArn
+
+
+  OrderFailureQueueUrl:
+    Description: CloudMart Order Failure Queue URL
+
+    Value: !Ref OrderFailureQueue
+
+    Export:
+      Name: !Sub CloudMart-${Environment}-OrderFailureQueueUrl
+
+
+  AlarmNotificationLambdaArn:
+    Description: Milestone 5 Alarm Notification Lambda ARN
+
+    Value: !GetAtt AlarmNotificationLambda.Arn
+
+    Export:
+      Name: !Sub CloudMart-${Environment}-AlarmNotificationLambdaArn

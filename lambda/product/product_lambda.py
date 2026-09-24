@@ -1,3 +1,17 @@
+# AWS Clients
+# Environment Variables
+# Structured JSON Logging
+# Database Connection
+# JSON Serialization
+# HTTP Response
+# Product ID Extraction
+# EventBridge Inventory Event
+# Create Product
+# Get All Products
+# Get Product by ID
+# Update Product
+# Delete Product / Soft Delete
+# Lambda Handler / API Routing
 import json
 import os
 import boto3
@@ -47,7 +61,7 @@ def log(level, message, **kwargs):
             default=str
         )
     )
-
+# This makes CloudWatch logs easier to understand and search
 
 # ============================================================
 # DATABASE CONNECTION
@@ -87,7 +101,7 @@ def json_serializer(value):
 
     return str(value)
 
-
+# converts database values into formats that JSON understands.
 # ============================================================
 # HTTP RESPONSE
 # ============================================================
@@ -112,7 +126,7 @@ def response(status_code, body=None):
 
 
 # ============================================================
-# PRODUCT ID
+#  Get PRODUCT ID
 # ============================================================
 
 def get_product_id(event):
@@ -136,6 +150,26 @@ def get_product_id(event):
     except (ValueError, TypeError):
 
         return None
+
+
+# ============================================================
+# AUTHORIZATION
+# ============================================================
+
+def get_user_role(event):
+
+    authorizer = (
+        event.get("requestContext", {})
+        .get("authorizer", {})
+        .get("lambda", {})
+    )
+
+    return authorizer.get("role")
+
+
+def is_admin(event):
+
+    return get_user_role(event) == "admin"
 
 
 # ============================================================
@@ -200,10 +234,6 @@ def publish_inventory_event(
             error=str(error)
         )
 
-        # Do not fail the product transaction
-        # because EventBridge is unavailable.
-
-
 # ============================================================
 # CREATE PRODUCT
 # ============================================================
@@ -234,7 +264,16 @@ def create_product(event):
 
     quantity = body.get("inventory")
 
-    if not name or price is None or quantity is None:
+    # --------------------------------------------------------
+    # Validate required fields
+    # --------------------------------------------------------
+
+    if (
+        not isinstance(name, str)
+        or not name.strip()
+        or price is None
+        or quantity is None
+    ):
 
         return response(
             400,
@@ -243,6 +282,9 @@ def create_product(event):
                 "name, price and inventory are required"
             }
         )
+
+    # Remove unnecessary spaces around the product name
+    name = name.strip()
 
     try:
 
@@ -278,6 +320,7 @@ def create_product(event):
                 SELECT product_id
                 FROM products
                 WHERE name = %s
+                  AND is_active = 1
                 """,
                 (name,)
             )
@@ -437,6 +480,7 @@ def get_all_products():
                 FROM products p
                 LEFT JOIN inventory i
                     ON p.product_id = i.product_id
+                WHERE p.is_active = 1
                 ORDER BY p.product_id
                 """
             )
@@ -505,6 +549,7 @@ def get_product(product_id):
                 LEFT JOIN inventory i
                     ON p.product_id = i.product_id
                 WHERE p.product_id = %s
+                  AND p.is_active = 1
                 """,
                 (product_id,)
             )
@@ -586,7 +631,16 @@ def update_product(event, product_id):
 
     quantity = body.get("inventory")
 
-    if not name or price is None or quantity is None:
+    # --------------------------------------------------------
+    # Validate required fields
+    # --------------------------------------------------------
+
+    if (
+        not isinstance(name, str)
+        or not name.strip()
+        or price is None
+        or quantity is None
+    ):
 
         return response(
             400,
@@ -595,6 +649,9 @@ def update_product(event, product_id):
                 "name, price and inventory are required"
             }
         )
+
+    # Remove unnecessary spaces around the product name
+    name = name.strip()
 
     try:
 
@@ -630,6 +687,7 @@ def update_product(event, product_id):
                 SELECT product_id
                 FROM products
                 WHERE product_id = %s
+                  AND is_active = 1
                 """,
                 (product_id,)
             )
@@ -826,24 +884,15 @@ def delete_product(product_id):
                 )
 
             # ------------------------------------------------
-            # Delete inventory first
+            # Soft delete product
             # ------------------------------------------------
 
             cursor.execute(
                 """
-                DELETE FROM inventory
-                WHERE product_id = %s
-                """,
-                (product_id,)
-            )
-
-            # ------------------------------------------------
-            # Delete product
-            # ------------------------------------------------
-
-            cursor.execute(
-                """
-                DELETE FROM products
+                UPDATE products
+                SET
+                    is_active = 0,
+                    updated_at = CURRENT_TIMESTAMP
                 WHERE product_id = %s
                 """,
                 (product_id,)
@@ -884,7 +933,6 @@ def delete_product(product_id):
 
         connection.close()
 
-
 # ============================================================
 # LAMBDA HANDLER
 # ============================================================
@@ -920,14 +968,33 @@ def lambda_handler(event, context):
 
     # --------------------------------------------------------
     # POST /products
+    # Admin only
     # --------------------------------------------------------
 
     if method == "POST" and product_id is None:
+
+        if not is_admin(event):
+
+            log(
+                "WARN",
+                "Unauthorized product creation attempt",
+                operation="create_product",
+                role=get_user_role(event)
+            )
+
+            return response(
+                403,
+                {
+                    "message":
+                    "Admin permission required"
+                }
+            )
 
         return create_product(event)
 
     # --------------------------------------------------------
     # GET /products
+    # Customer and Admin
     # --------------------------------------------------------
 
     if method == "GET" and product_id is None:
@@ -936,6 +1003,7 @@ def lambda_handler(event, context):
 
     # --------------------------------------------------------
     # GET /products/{productId}
+    # Customer and Admin
     # --------------------------------------------------------
 
     if method == "GET" and product_id is not None:
@@ -944,9 +1012,28 @@ def lambda_handler(event, context):
 
     # --------------------------------------------------------
     # PUT /products/{productId}
+    # Admin only
     # --------------------------------------------------------
 
     if method == "PUT" and product_id is not None:
+
+        if not is_admin(event):
+
+            log(
+                "WARN",
+                "Unauthorized product update attempt",
+                operation="update_product",
+                product_id=product_id,
+                role=get_user_role(event)
+            )
+
+            return response(
+                403,
+                {
+                    "message":
+                    "Admin permission required"
+                }
+            )
 
         return update_product(
             event,
@@ -955,9 +1042,28 @@ def lambda_handler(event, context):
 
     # --------------------------------------------------------
     # DELETE /products/{productId}
+    # Admin only
     # --------------------------------------------------------
 
     if method == "DELETE" and product_id is not None:
+
+        if not is_admin(event):
+
+            log(
+                "WARN",
+                "Unauthorized product deletion attempt",
+                operation="delete_product",
+                product_id=product_id,
+                role=get_user_role(event)
+            )
+
+            return response(
+                403,
+                {
+                    "message":
+                    "Admin permission required"
+                }
+            )
 
         return delete_product(
             product_id

@@ -78,7 +78,9 @@ jobs:
           aws cloudformation deploy \
             --stack-name cloudmart-security-iam-dev \
             --template-file cloudformation/Security_IAM_Stack.yaml \
-            --parameter-overrides Environment=dev \
+            --parameter-overrides \
+              Environment=dev \
+              SenderEmail="${{ secrets.SENDER_EMAIL }}" \
             --capabilities CAPABILITY_NAMED_IAM
 
 
@@ -95,8 +97,6 @@ jobs:
 
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          ref: main
 
       - name: Verify Data Stack File
         run: |
@@ -117,24 +117,6 @@ jobs:
 
       - name: Verify AWS identity
         run: aws sts get-caller-identity
-
-      # ------------------------------------------------
-      # Create SSM SecureString parameters
-      # ------------------------------------------------
-
-      - name: Create SSM SecureString Parameters
-        run: |
-          aws ssm put-parameter \
-            --name "/cloudmart/dev/db/password" \
-            --value "${{ secrets.DB_PASSWORD }}" \
-            --type SecureString \
-            --overwrite
-
-          aws ssm put-parameter \
-            --name "/cloudmart/dev/auth/token" \
-            --value "${{ secrets.AUTH_TOKEN }}" \
-            --type SecureString \
-            --overwrite
 
       # ------------------------------------------------
       # Validate Data Storage Stack
@@ -160,11 +142,12 @@ jobs:
               DBUsername=admin \
               DBPassword="${{ secrets.DB_PASSWORD }}" \
               AuthToken="${{ secrets.AUTH_TOKEN }}" \
+              JWTSecret="${{ secrets.JWT_SECRET }}" \
             --capabilities CAPABILITY_NAMED_IAM
 
 
   # ==================================================
-  # APPLICATION STACK - MILESTONE 3
+  # APPLICATION STACK - MILESTONE 4
   # ==================================================
 
   deploy-application:
@@ -207,6 +190,14 @@ jobs:
             --template-file cloudformation/Application_Stack.yaml
 
       # ------------------------------------------------
+      # Prepare Database Initialization Lambda
+      # ------------------------------------------------
+
+      - name: Prepare Database Schema
+        run: |
+          cp database/schema.sql lambda/db_init/schema.sql
+
+      # ------------------------------------------------
       # Build SAM application
       # ------------------------------------------------
 
@@ -230,5 +221,124 @@ jobs:
             --parameter-overrides \
               Environment=dev \
               NotificationEmail="${{ secrets.NOTIFICATION_EMAIL }}" \
+              SenderEmail="${{ secrets.SENDER_EMAIL }}" \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset
+
+      # ------------------------------------------------
+      # Wait for RDS
+      # ------------------------------------------------
+
+      - name: Wait for RDS
+        run: |
+          aws rds wait db-instance-available \
+            --db-instance-identifier cloudmart-dev-mysql
+
+      # ------------------------------------------------
+      # Initialize Database Schema
+      # ------------------------------------------------
+
+      - name: Initialize Database
+        run: |
+          aws lambda invoke \
+            --function-name cloudmart-dev-db-init \
+            --payload '{}' \
+            --cli-binary-format raw-in-base64-out \
+            db-init-response.json
+
+          cat db-init-response.json
+
+
+  # ==================================================
+  # MONITORING STACK - MILESTONE 5
+  # ==================================================
+
+  deploy-monitoring:
+    name: Deploy Monitoring Stack
+    runs-on: ubuntu-latest
+    needs: deploy-application
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ARN_ROLE }}
+          aws-region: us-east-1
+
+      - name: Verify AWS identity
+        run: aws sts get-caller-identity
+
+      - name: Validate Monitoring Stack
+        run: |
+          aws cloudformation validate-template \
+            --template-body "file://cloudformation/Event _Monitoring _Stack.yaml"
+
+      - name: Deploy Monitoring Stack
+        run: |
+          aws cloudformation deploy \
+            --stack-name cloudmart-monitoring-dev \
+            --template-file "cloudformation/Event _Monitoring _Stack.yaml" \
+            --parameter-overrides \
+              Environment=dev \
+              NotificationEmail="${{ secrets.NOTIFICATION_EMAIL }}" \
+            --no-fail-on-empty-changeset
+
+
+
+  # ==================================================
+  # EC2 DASHBOARD DEPLOYMENT - MILESTONE 5
+  # ==================================================
+
+  deploy-ec2-dashboard:
+    name: Deploy EC2 Dashboard
+    runs-on: ubuntu-latest
+    needs: deploy-monitoring
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ARN_ROLE }}
+          aws-region: us-east-1
+
+      - name: Verify AWS identity
+        run: aws sts get-caller-identity
+
+      - name: Deploy Dashboard to EC2
+        run: |
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids i-0aaf6168396487377 \
+            --document-name "AWS-RunShellScript" \
+            --parameters 'commands=[
+              "mkdir -p /opt/cloudmart-dashboard/templates",
+              "curl -L -o /opt/cloudmart-dashboard/app.py https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/dashboard/app.py",
+              "curl -L -o /opt/cloudmart-dashboard/templates/dashboard.html https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/dashboard/templates/dashboard.html",
+              "curl -L -o /opt/cloudmart-dashboard/templates/login.html https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/dashboard/templates/login.html",
+              "chown -R ec2-user:ec2-user /opt/cloudmart-dashboard",
+              "systemctl restart cloudmart-dashboard",
+              "systemctl restart nginx",
+              "systemctl is-active cloudmart-dashboard",
+              "systemctl is-active nginx"
+            ]' \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "SSM Command ID: $COMMAND_ID"
+
+          aws ssm wait command-executed \
+            --command-id "$COMMAND_ID" \
+            --instance-id i-0aaf6168396487377
+
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id i-0aaf6168396487377 \
+            --query "{Status:Status,Output:StandardOutputContent,Error:StandardErrorContent}" \
+            --output json

@@ -38,8 +38,54 @@ Parameters:
     MinLength: 16
     Description: CloudMart API authentication token
 
+  JWTSecret:
+    Type: String
+    NoEcho: true
+    MinLength: 16
+    Description: CloudMart JWT secret
+
 
 Resources:
+
+  # ==================================================
+  # SSM PARAMETERS
+  # ==================================================
+
+  DBPasswordParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /cloudmart/${Environment}/db/password
+      Type: String
+      Value: !Ref DBPassword
+      Description: !Sub CloudMart ${Environment} RDS database password
+      Tags:
+        Project: CloudMart
+        Environment: !Ref Environment
+
+
+  AuthTokenParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /cloudmart/${Environment}/auth/token
+      Type: String
+      Value: !Ref AuthToken
+      Description: !Sub CloudMart ${Environment} API authentication token
+      Tags:
+        Project: CloudMart
+        Environment: !Ref Environment
+
+
+  JWTSecretParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /cloudmart/${Environment}/auth/jwt-secret
+      Type: String
+      Value: !Ref JWTSecret
+      Description: !Sub CloudMart ${Environment} JWT secret
+      Tags:
+        Project: CloudMart
+        Environment: !Ref Environment
+
 
   # ==================================================
   # RDS DB SUBNET GROUP
@@ -84,9 +130,7 @@ Resources:
 
       # Password is stored in SSM Parameter Store
       # as a SecureString and retrieved securely.
-      MasterUserPassword: !Sub
-        - '{{resolve:ssm-secure:${PasswordParameterName}}}'
-        - PasswordParameterName: !Sub /cloudmart/${Environment}/db/password
+      MasterUserPassword: !Ref DBPassword
 
       DBInstanceClass: db.t3.micro
 

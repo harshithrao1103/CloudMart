@@ -1,0 +1,1972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>CloudMart | Admin Dashboard</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f1f5f9;
+            color: #111827;
+        }
+
+        /* ================= NAVBAR ================= */
+
+        .navbar {
+            height: 70px;
+            background: #0f172a;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-icon {
+            width: 40px;
+            height: 40px;
+            background: #2563eb;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .brand-name {
+            font-size: 21px;
+            font-weight: 700;
+        }
+
+        .admin-area {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+
+        .admin-label {
+            font-size: 13px;
+            color: #cbd5e1;
+        }
+
+        .logout {
+            text-decoration: none;
+            color: white;
+            background: #334155;
+            padding: 9px 15px;
+            border-radius: 7px;
+            font-size: 13px;
+        }
+
+        .logout:hover {
+            background: #475569;
+        }
+
+        /* ================= SIDEBAR ================= */
+
+        .sidebar {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            bottom: 0;
+            width: 230px;
+            background: white;
+            border-right: 1px solid #e2e8f0;
+            padding: 25px 15px;
+            z-index: 90;
+        }
+
+        .sidebar-title {
+            font-size: 11px;
+            color: #94a3b8;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin: 0 12px 12px;
+        }
+
+        .nav-button {
+            width: 100%;
+            border: none;
+            background: transparent;
+            padding: 13px 15px;
+            margin-bottom: 6px;
+            border-radius: 9px;
+            text-align: left;
+            font-size: 14px;
+            color: #475569;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .nav-button:hover {
+            background: #f1f5f9;
+            color: #1d4ed8;
+        }
+
+        .nav-button.active {
+            background: #eff6ff;
+            color: #2563eb;
+            font-weight: 600;
+        }
+
+        .nav-icon {
+            width: 22px;
+            text-align: center;
+            font-size: 17px;
+        }
+
+        /* ================= MAIN ================= */
+
+        .main {
+            margin-left: 230px;
+            padding-top: 70px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1500px;
+            margin: auto;
+            padding: 35px;
+        }
+
+        .page-header {
+            margin-bottom: 25px;
+        }
+
+        .page-header h1 {
+            font-size: 30px;
+            margin-bottom: 7px;
+        }
+
+        .page-header p {
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        /* ================= PAGE SECTIONS ================= */
+
+        .page-section {
+            display: none;
+        }
+
+        .page-section.active {
+            display: block;
+        }
+
+        /* ================= STATS ================= */
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 14px;
+            padding: 23px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.04);
+        }
+
+        .stat-title {
+            color: #64748b;
+            font-size: 13px;
+            margin-bottom: 10px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .stat-icon {
+            float: right;
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            background: #eff6ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        /* ================= SECTION ================= */
+
+        .section {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            margin-bottom: 25px;
+            overflow: hidden;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.04);
+        }
+
+        .section-header {
+            padding: 22px 25px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .section-header h2 {
+            font-size: 19px;
+        }
+
+        .section-header p {
+            color: #64748b;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        /* ================= TABLE ================= */
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 750px;
+        }
+
+        th {
+            background: #f8fafc;
+            color: #475569;
+            font-size: 12px;
+            font-weight: 600;
+            text-align: left;
+            padding: 14px 20px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        td {
+            padding: 15px 20px;
+            font-size: 13px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        tr:hover {
+            background: #f8fafc;
+        }
+
+        .product-id,
+        .order-id {
+            font-weight: 600;
+            color: #2563eb;
+        }
+
+        .price {
+            font-weight: 600;
+        }
+
+        .description {
+            color: #64748b;
+            max-width: 250px;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        /* ================= TOP PRODUCTS ================= */
+
+        .top-products {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            padding: 20px;
+        }
+
+        .top-product {
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 18px;
+            background: #f8fafc;
+        }
+
+        .top-product-rank {
+            color: #2563eb;
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .top-product-name {
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .top-product-quantity {
+            color: #64748b;
+            font-size: 13px;
+        }
+
+        /* ================= SEARCH ================= */
+
+        .search-box {
+            padding: 18px 25px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .search-input {
+            width: 100%;
+            max-width: 400px;
+            padding: 11px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 13px;
+            outline: none;
+        }
+
+        .search-input:focus {
+            border-color: #2563eb;
+        }
+
+      /* ================= REPORT ================= */
+
+        .report-section {
+            padding: 25px;
+        }
+
+        .report-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .report-info h3 {
+            font-size: 18px;
+            margin-bottom: 7px;
+        }
+
+        .report-info p {
+            color: #64748b;
+            font-size: 13px;
+        }
+
+        .download-button {
+            text-decoration: none;
+            padding: 13px 22px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            background: #2563eb;
+            color: white;
+        }
+
+        .download-button:hover {
+            background: #1d4ed8;
+        }
+
+        .report-divider {
+            height: 1px;
+            background: #e2e8f0;
+            margin: 25px 0;
+        }
+
+        .previous-reports h4 {
+            font-size: 18px;
+            margin-bottom: 7px;
+        }
+
+        .previous-reports-description {
+            color: #64748b;
+            font-size: 13px;
+            margin-bottom: 25px;
+        }
+
+        .reports-carousel {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .report-list {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 20px;
+            flex: 1;
+        }
+
+        .previous-report {
+            min-height: 155px;
+            padding: 22px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            background: white;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .report-date {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .report-calendar {
+            width: 42px;
+            height: 42px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .report-details {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .report-date-text {
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .report-size {
+            color: #64748b;
+            font-size: 13px;
+        }
+
+        .report-download-button {
+            display: block;
+            text-align: center;
+            text-decoration: none;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            background: #eff6ff;
+            color: #2563eb;
+        }
+
+        .report-download-button:hover {
+            background: #dbeafe;
+        }
+
+        .report-nav-button {
+            flex-shrink: 0;
+            width: 44px;
+            height: 60px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            color: #2563eb;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 28px;
+        }
+
+        .report-nav-button:hover:not(:disabled) {
+            background: #eff6ff;
+        }
+
+        .report-nav-button:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
+
+        .report-count {
+            text-align: center;
+            color: #64748b;
+            font-size: 13px;
+            margin-top: 22px;
+        }
+
+        /* ================= PAGINATION ================= */
+
+        .pagination {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            padding: 18px 25px 22px;
+        }
+
+        .pagination-button {
+            width: 40px;
+            height: 40px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            color: #2563eb;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 22px;
+        }
+
+        .pagination-button:hover:not(:disabled) {
+            background: #eff6ff;
+        }
+
+        .pagination-button:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
+
+        .pagination-count {
+            color: #64748b;
+            font-size: 13px;
+            min-width: 110px;
+            text-align: center;
+        }
+
+        /* ================= LOW STOCK ================= */
+
+        .low-stock-badge {
+            display: inline-block;
+            background: #fee2e2;
+            color: #b91c1c;
+            padding: 5px 9px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        /* ================= EMPTY ================= */
+
+        .empty {
+            text-align: center;
+            padding: 35px;
+            color: #94a3b8;
+            font-size: 13px;
+        }
+
+        footer {
+            text-align: center;
+            color: #94a3b8;
+            font-size: 12px;
+            padding: 10px 0 30px;
+        }
+
+        /* ================= RESPONSIVE ================= */
+
+        @media (max-width: 1100px) {
+            .top-products {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 900px) {
+            .sidebar {
+                width: 190px;
+            }
+
+            .main {
+                margin-left: 190px;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+
+            .top-products {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .admin-label {
+                display: none;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .navbar {
+                padding: 0 15px;
+            }
+
+            .brand-name {
+                font-size: 18px;
+            }
+
+            .sidebar {
+                width: 70px;
+                padding: 20px 8px;
+            }
+
+            .sidebar-title {
+                display: none;
+            }
+
+            .nav-button {
+                justify-content: center;
+                padding: 13px 5px;
+            }
+
+            .nav-button span:not(.nav-icon) {
+                display: none;
+            }
+
+            .main {
+                margin-left: 70px;
+            }
+
+            .container {
+                padding: 20px 12px;
+            }
+
+            .top-products {
+                grid-template-columns: 1fr;
+            }
+
+            .report-section {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ================= NAVBAR ================= -->
+
+    <nav class="navbar">
+
+        <div class="brand">
+            <div class="brand-icon">C</div>
+            <div class="brand-name">CloudMart</div>
+        </div>
+
+        <div class="admin-area">
+            <span class="admin-label">Administrator</span>
+
+            <a href="{{ url_for('logout') }}" class="logout">
+                Logout
+            </a>
+        </div>
+
+    </nav>
+
+
+    <!-- ================= SIDEBAR ================= -->
+
+    <aside class="sidebar">
+
+        <div class="sidebar-title">
+            Administration
+        </div>
+
+        <button class="nav-button active" onclick="showPage('home', this)">
+            <span class="nav-icon">🏠</span>
+            <span>Home</span>
+        </button>
+
+        <button class="nav-button" onclick="showPage('products', this)">
+            <span class="nav-icon">📦</span>
+            <span>Products</span>
+        </button>
+
+        <button class="nav-button" onclick="showPage('orders', this)">
+            <span class="nav-icon">🛒</span>
+            <span>Orders</span>
+        </button>
+
+        <button class="nav-button" onclick="showPage('customers', this)">
+            <span class="nav-icon">👤</span>
+            <span>Customers</span>
+        </button>
+
+    </aside>
+
+
+    <!-- ================= MAIN ================= -->
+
+    <main class="main">
+
+        <div class="container">
+
+            <!-- ================================================= -->
+            <!-- HOME -->
+            <!-- ================================================= -->
+
+            <section id="home" class="page-section active">
+
+                <div class="page-header">
+
+                    <h1>Dashboard Home</h1>
+
+                    <p>
+                        Overview of CloudMart products, orders and daily activity.
+                    </p>
+
+                </div>
+
+
+                <!-- Statistics -->
+
+                <div class="stats">
+
+                    <div class="stat-card">
+
+                        <div class="stat-icon">📦</div>
+
+                        <div class="stat-title">
+                            Total Products
+                        </div>
+
+                        <div class="stat-value">
+                            {{ products|length }}
+                        </div>
+
+                    </div>
+
+
+                    <div class="stat-card">
+
+                        <div class="stat-icon">🛒</div>
+
+                        <div class="stat-title">
+                            Recent Orders
+                        </div>
+
+                        <div class="stat-value">
+                            {{ orders|length }}
+                        </div>
+
+                    </div>
+
+
+                    <div class="stat-card">
+
+                        <div class="stat-icon">📊</div>
+
+                        <div class="stat-title">
+                            Daily Report
+                        </div>
+
+                        <div class="stat-value">
+                            Ready
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- Top 5 Most Ordered Products -->
+
+                <section class="section">
+
+                    <div class="section-header">
+
+                        <div>
+                            <h2>Top 5 Most Ordered Products</h2>
+                            <p>Products with the highest ordered quantity</p>
+                        </div>
+
+                    </div>
+
+                    <div id="topProducts" class="top-products"></div>
+
+                </section>
+
+
+                <!-- Latest 5 Orders -->
+
+                <section class="section">
+
+                    <div class="section-header">
+
+                        <div>
+                            <h2>Latest 5 Orders</h2>
+                            <p>Most recent orders placed in CloudMart</p>
+                        </div>
+
+                    </div>
+
+                    {% if orders %}
+
+                    <div class="table-container">
+
+                        <table>
+
+                            <thead>
+
+                                <tr>
+                                    <th>Date & Time (IST)</th>
+                                    <th>Order ID</th>
+                                    <th>Customer ID</th>
+                                    <th>Product ID</th>
+                                    <th>Product Name</th>
+                                    <th>Quantity</th>
+                                    <th>Total Bill</th>
+                                    <th>Status</th>
+                                </tr>
+
+                            </thead>
+
+                            <tbody>
+
+                                {% for order in orders[:5] %}
+
+                                <tr>
+
+                                    <td>
+                                        {{ order.created_at }}
+                                    </td>
+
+                                    <td class="order-id">
+                                        {{ order.order_id }}
+                                    </td>
+
+                                    <td>
+                                        {{ order.customer_id }}
+                                    </td>
+
+                                    <td>
+                                        {{ order.product_id }}
+                                    </td>
+
+                                    <td>
+                                        <strong>{{ order.product_name }}</strong>
+                                    </td>
+
+                                    <td>
+                                        {{ order.quantity }}
+                                    </td>
+
+                                    <td class="price">
+                                        ₹{{ "%.2f"|format(order.total_bill) }}
+                                    </td>
+
+                                    <td>
+                                        <span class="status">
+                                            {{ order.status }}
+                                        </span>
+                                    </td>
+
+                                </tr>
+
+                                {% endfor %}
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                    {% else %}
+
+                    <div class="empty">
+                        No recent orders available.
+                    </div>
+
+                    {% endif %}
+
+                </section>
+
+
+                <!-- Daily Report -->
+
+                <section class="section">
+
+                    <div class="report-section">
+
+                        <!-- Header -->
+                        <div class="report-header">
+
+                            <div class="report-info">
+                                <h3>📄 Daily Report</h3>
+
+                                <p>
+                                    Download CloudMart revenue reports.
+                                </p>
+                            </div>
+
+                            <a
+                                href="{{ url_for('download_report') }}"
+                                class="download-button"
+                            >
+                                ⬇ Download Today
+                            </a>
+
+                        </div>
+
+                        <div class="report-divider"></div>
+
+                        <!-- Previous Reports -->
+                        <div class="previous-reports">
+
+                            <h4>Previous Reports</h4>
+
+                            <p class="previous-reports-description">
+                                Browse and download previous daily reports (latest 5 shown).
+                            </p>
+
+                            <div class="reports-carousel">
+
+                                <button
+                                    type="button"
+                                    class="report-nav-button"
+                                    id="previousReports"
+                                    onclick="changeReportPage(-1)"
+                                >
+                                    ‹
+                                </button>
+
+                                <div id="reportList" class="report-list">
+                                </div>
+
+                                <button
+                                    type="button"
+                                    class="report-nav-button"
+                                    id="nextReports"
+                                    onclick="changeReportPage(1)"
+                                >
+                                    ›
+                                </button>
+
+                            </div>
+
+                            <div
+                                id="reportCount"
+                                class="report-count"
+                            ></div>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+            </section>
+        
+
+            <!-- ================================================= -->
+            <!-- PRODUCTS -->
+            <!-- ================================================= -->
+
+            <section id="products" class="page-section">
+
+                <div class="page-header">
+
+                    <h1>Products</h1>
+
+                    <p>
+                        View all CloudMart products and inventory information.
+                    </p>
+
+                </div>
+
+
+                <!-- Product Search -->
+
+                <section class="section">
+
+                    <div class="section-header">
+
+                        <div>
+                            <h2>Search Product</h2>
+                            <p>Search products using Product ID</p>
+                        </div>
+
+                    </div>
+
+                    <div class="search-box">
+
+                        <input
+                            type="text"
+                            id="productSearch"
+                            class="search-input"
+                            placeholder="Enter Product ID"
+                            onkeyup="filterProducts()"
+                        >
+
+                    </div>
+
+                </section>
+
+
+                <!-- All Products -->
+
+                <section class="section">
+
+                    <div class="section-header">
+
+                        <div>
+                            <h2>All Products</h2>
+                            <p>Current product inventory and pricing</p>
+                        </div>
+
+                    </div>
+
+                    {% if products %}
+
+                    <div class="table-container">
+
+                        <table>
+
+                            <thead>
+
+                                <tr>
+                                    <th>Product ID</th>
+                                    <th>Product Name</th>
+                                    <th>Inventory</th>
+                                    <th>Cost</th>
+                                    <th>Description</th>
+                                </tr>
+
+                            </thead>
+
+                            <tbody id="allProductsBody">
+
+                                {% for product in products %}
+
+                                <tr class="product-row">
+
+                                    <td class="product-id product-id-value">
+                                        {{ product.product_id }}
+                                    </td>
+
+                                    <td>
+                                        <strong>{{ product.name }}</strong>
+                                    </td>
+
+                                    <td>
+                                        {{ product.inventory if product.inventory is not none else 0 }}
+                                    </td>
+
+                                    <td class="price">
+                                        ₹{{ "%.2f"|format(product.cost) }}
+                                    </td>
+
+                                    <td class="description">
+                                        {{ product.description or "No description available" }}
+                                    </td>
+
+                                </tr>
+
+                                {% endfor %}
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                    <div id="allProductsPagination" class="pagination"></div>
+
+                    {% else %}
+
+                    <div class="empty">
+                        No products available.
+                    </div>
+
+                    {% endif %}
+
+                </section>
+
+
+                <!-- Low Stock Products -->
+
+                <section class="section">
+
+                    <div class="section-header">
+
+                        <div>
+                            <h2>Low Stock Products</h2>
+                            <p>Products with inventory of 5 units or less</p>
+                        </div>
+
+                    </div>
+
+                    <div id="lowStockProducts"></div>
+
+                    <div id="lowStockPagination" class="pagination"></div>
+
+                </section>
+
+            </section>
+
+
+            <!-- ================================================= -->
+            <!-- ORDERS -->
+            <!-- ================================================= -->
+
+            <section id="orders" class="page-section">
+
+                <div class="page-header">
+
+                    <h1>Orders</h1>
+
+                    <p>
+                        View and search CloudMart customer orders.
+                    </p>
+
+                </div>
+
+
+                <section class="section">
+
+                    <div class="section-header">
+
+                        <div>
+                            <h2>All Orders</h2>
+                            <p>Search orders using Customer ID</p>
+                        </div>
+
+                    </div>
+
+
+                    <div class="search-box">
+
+                        <input
+                            type="text"
+                            id="customerSearch"
+                            class="search-input"
+                            placeholder="Enter Customer ID"
+                            onkeyup="filterOrders()"
+                        >
+
+                    </div>
+
+
+                    {% if orders %}
+
+                    <div class="table-container">
+
+                        <table>
+
+                            <thead>
+
+                                <tr>
+                                    <th>Date & Time (IST)</th>
+                                    <th>Order ID</th>
+                                    <th>Customer ID</th>
+                                    <th>Product ID</th>
+                                    <th>Product Name</th>
+                                    <th>Quantity</th>
+                                    <th>Total Bill</th>
+                                    <th>Status</th>
+                                </tr>
+
+                            </thead>
+
+                            <tbody id="ordersTableBody">
+
+                                {% for order in orders %}
+
+                                <tr class="order-row">
+
+                                    <td>
+                                        {{ order.created_at }}
+                                    </td>
+
+                                    <td class="order-id">
+                                        {{ order.order_id }}
+                                    </td>
+
+                                    <td class="customer-id">
+                                        {{ order.customer_id }}
+                                    </td>
+
+                                    <td>
+                                        {{ order.product_id }}
+                                    </td>
+
+                                    <td>
+                                        <strong>{{ order.product_name }}</strong>
+                                    </td>
+
+                                    <td>
+                                        {{ order.quantity }}
+                                    </td>
+
+                                    <td class="price">
+                                        ₹{{ "%.2f"|format(order.total_bill) }}
+                                    </td>
+
+                                    <td>
+                                        <span class="status">
+                                            {{ order.status }}
+                                        </span>
+                                    </td>
+
+                                </tr>
+
+                                {% endfor %}
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                    <div id="ordersPagination" class="pagination"></div>
+
+                    {% else %}
+
+                    <div class="empty">
+                        No orders available.
+                    </div>
+
+                    {% endif %}
+
+                </section>
+
+            </section>
+
+
+            <!-- ================================================= -->
+            <!-- CUSTOMERS -->
+            <!-- ================================================= -->
+
+            <section id="customers" class="page-section">
+
+                <div class="page-header">
+
+                    <h1>Customers</h1>
+
+                    <p>
+                        Search and view CloudMart customer details.
+                    </p>
+
+                </div>
+
+
+                <section class="section">
+
+                    <div class="section-header">
+
+                        <div>
+                            <h2>Customer Details</h2>
+                            <p>Search customers using Customer ID</p>
+                        </div>
+
+                    </div>
+
+                    <div class="search-box">
+
+                        <input
+                            type="text"
+                            id="customerDetailsSearch"
+                            class="search-input"
+                            placeholder="Enter Customer ID"
+                            onkeyup="handleCustomerSearchKey(event)"
+                        >
+
+                        <button
+                            type="button"
+                            class="download-button"
+                            onclick="searchCustomer()"
+                            style="border: none; cursor: pointer; margin-left: 8px;"
+                        >
+                            Search
+                        </button>
+
+                    </div>
+
+                    <div id="customerResult">
+                        <div class="empty">
+                            Loading customers...
+                        </div>
+                    </div>
+
+                    <div id="customersPagination" class="pagination"></div>
+
+                </section>
+
+            </section>
+
+
+            <footer>
+                CloudMart Admin Portal
+            </footer>
+
+        </div>
+
+    </main>
+
+
+    <!-- ================= JAVASCRIPT ================= -->
+
+    <script>
+
+        /* ================= PAGINATION HELPER ================= */
+
+        function renderPagination(container, currentPage, totalItems, onPageChange) {
+
+            if (!container || totalItems <= itemsPerPage) {
+                if (container) {
+                    container.innerHTML = "";
+                }
+                return;
+            }
+
+            const totalPages = Math.ceil(totalItems / itemsPerPage);
+            const start = currentPage * itemsPerPage + 1;
+            const end = Math.min((currentPage + 1) * itemsPerPage, totalItems);
+
+            container.innerHTML = `
+                <button
+                    type="button"
+                    class="pagination-button"
+                    ${currentPage === 0 ? "disabled" : ""}
+                    onclick="${container.id}Previous()"
+                >
+                    ‹
+                </button>
+
+                <span class="pagination-count">
+                    ${start} – ${end} of ${totalItems}
+                </span>
+
+                <button
+                    type="button"
+                    class="pagination-button"
+                    ${currentPage >= totalPages - 1 ? "disabled" : ""}
+                    onclick="${container.id}Next()"
+                >
+                    ›
+                </button>
+            `;
+
+            window[container.id + "Previous"] = function() {
+                if (currentPage > 0) {
+                    onPageChange(currentPage - 1);
+                }
+            };
+
+            window[container.id + "Next"] = function() {
+                if (currentPage < totalPages - 1) {
+                    onPageChange(currentPage + 1);
+                }
+            };
+        }
+
+
+        /* ================= PAGE SWITCHING ================= */
+
+        function showPage(pageId, button) {
+
+            document.querySelectorAll(".page-section").forEach(function(section) {
+                section.classList.remove("active");
+            });
+
+            document.getElementById(pageId).classList.add("active");
+
+            document.querySelectorAll(".nav-button").forEach(function(navButton) {
+                navButton.classList.remove("active");
+            });
+
+            button.classList.add("active");
+
+            if (pageId === "customers") {
+                loadAllCustomers();
+            }
+        }
+
+
+        /* ================= TOP 5 PRODUCTS ================= */
+
+        const orders = [
+            {% for order in orders %}
+            {
+                productId: "{{ order.product_id }}",
+                productName: "{{ order.product_name|replace('"', '\\"') }}",
+                quantity: Number("{{ order.quantity }}")
+            },
+            {% endfor %}
+        ];
+
+        const productTotals = {};
+
+        orders.forEach(function(order) {
+
+            if (!productTotals[order.productId]) {
+
+                productTotals[order.productId] = {
+                    name: order.productName,
+                    quantity: 0
+                };
+
+            }
+
+            productTotals[order.productId].quantity += order.quantity;
+
+        });
+
+        const topProducts = Object.values(productTotals)
+            .sort(function(a, b) {
+                return b.quantity - a.quantity;
+            })
+            .slice(0, 5);
+
+        const topProductsContainer =
+            document.getElementById("topProducts");
+
+        if (topProducts.length === 0) {
+
+            topProductsContainer.innerHTML =
+                '<div class="empty">No order data available.</div>';
+
+        } else {
+
+            topProducts.forEach(function(product, index) {
+
+                topProductsContainer.innerHTML += `
+                    <div class="top-product">
+
+                        <div class="top-product-rank">
+                            #${index + 1}
+                        </div>
+
+                        <div class="top-product-name">
+                            ${product.name}
+                        </div>
+
+                        <div class="top-product-quantity">
+                            ${product.quantity} units ordered
+                        </div>
+
+                    </div>
+                `;
+
+            });
+
+        }
+
+
+        /* ================= LOW STOCK PRODUCTS ================= */
+
+        const allProducts = [
+            {% for product in products %}
+            {
+                id: "{{ product.product_id }}",
+                name: "{{ product.name|replace('"', '\\"') }}",
+                inventory: Number("{{ product.inventory if product.inventory is not none else 0 }}"),
+                cost: Number("{{ product.cost or 0 }}"),
+                description: "{{ product.description|replace('"', '\\"') if product.description else '' }}"
+            },
+            {% endfor %}
+        ];
+
+        const lowStockProducts =
+            allProducts.filter(function(product) {
+                return product.inventory <= 5;
+            });
+
+        let lowStockPage = 0;
+        const itemsPerPage = 10;
+
+        function renderLowStockProducts() {
+
+            const lowStockContainer =
+                document.getElementById("lowStockProducts");
+
+            const pagination =
+                document.getElementById("lowStockPagination");
+
+            if (lowStockProducts.length === 0) {
+
+                lowStockContainer.innerHTML =
+                    '<div class="empty">No low stock products.</div>';
+
+                pagination.innerHTML = "";
+                return;
+            }
+
+            const start = lowStockPage * itemsPerPage;
+            const end = Math.min(start + itemsPerPage, lowStockProducts.length);
+            const pageProducts = lowStockProducts.slice(start, end);
+
+            let html = `
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Product ID</th>
+                                <th>Product Name</th>
+                                <th>Inventory</th>
+                                <th>Cost</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            pageProducts.forEach(function(product) {
+                html += `
+                    <tr>
+                        <td class="product-id">${product.id}</td>
+                        <td><strong>${product.name}</strong></td>
+                        <td>
+                            <span class="low-stock-badge">
+                                ${product.inventory} units
+                            </span>
+                        </td>
+                        <td class="price">₹${product.cost.toFixed(2)}</td>
+                        <td class="description">
+                            ${product.description || "No description available"}
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            lowStockContainer.innerHTML = html;
+
+            renderPagination(
+                pagination,
+                lowStockPage,
+                lowStockProducts.length,
+                function(page) {
+                    lowStockPage = page;
+                    renderLowStockProducts();
+                }
+            );
+        }
+
+        renderLowStockProducts();
+
+
+        /* ================= ALL PRODUCTS PAGINATION + SEARCH ================= */
+
+        let allProductsPage = 0;
+
+        function getFilteredProductRows() {
+
+            const search =
+                document.getElementById("productSearch")
+                .value
+                .trim()
+                .toLowerCase();
+
+            const rows =
+                Array.from(document.querySelectorAll("#allProductsBody .product-row"));
+
+            return rows.filter(function(row) {
+
+                const productId =
+                    row.querySelector(".product-id-value")
+                    .textContent
+                    .trim()
+                    .toLowerCase();
+
+                return search === "" || productId === search;
+            });
+        }
+
+        function renderAllProducts() {
+
+            const rows =
+                Array.from(document.querySelectorAll("#allProductsBody .product-row"));
+
+            const filteredRows = getFilteredProductRows();
+            const total = filteredRows.length;
+            const start = allProductsPage * itemsPerPage;
+            const end = Math.min(start + itemsPerPage, total);
+
+            rows.forEach(function(row) {
+                row.style.display = "none";
+            });
+
+            filteredRows.slice(start, end).forEach(function(row) {
+                row.style.display = "";
+            });
+
+            renderPagination(
+                document.getElementById("allProductsPagination"),
+                allProductsPage,
+                total,
+                function(page) {
+                    allProductsPage = page;
+                    renderAllProducts();
+                }
+            );
+        }
+
+        function filterProducts() {
+            allProductsPage = 0;
+            renderAllProducts();
+        }
+
+
+        /* ================= CUSTOMER DETAILS SEARCH ================= */
+
+        let allCustomers = [];
+        let customersPage = 0;
+
+        function renderCustomers(customers) {
+
+            const result =
+                document.getElementById("customerResult");
+
+            const pagination =
+                document.getElementById("customersPagination");
+
+            if (customers.length === 0) {
+                result.innerHTML =
+                    '<div class="empty">No customers found.</div>';
+                pagination.innerHTML = "";
+                return;
+            }
+
+            const start = customersPage * itemsPerPage;
+            const end = Math.min(start + itemsPerPage, customers.length);
+            const pageCustomers = customers.slice(start, end);
+
+            let html = `
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Customer ID</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            pageCustomers.forEach(function(customer) {
+                html += `
+                    <tr>
+                        <td class="product-id">${customer.customer_id}</td>
+                        <td><strong>${customer.name || "-"}</strong></td>
+                        <td>${customer.email || "-"}</td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            result.innerHTML = html;
+
+            renderPagination(
+                pagination,
+                customersPage,
+                customers.length,
+                function(page) {
+                    customersPage = page;
+                    renderCustomers(allCustomers);
+                }
+            );
+        }
+
+        function handleCustomerSearchKey(event) {
+            if (event.key === "Enter") {
+                searchCustomer();
+            }
+        }
+
+        async function searchCustomer() {
+
+            const customerId =
+                document.getElementById("customerDetailsSearch")
+                .value
+                .trim();
+
+            const result =
+                document.getElementById("customerResult");
+
+            result.innerHTML =
+                '<div class="empty">Searching...</div>';
+
+            try {
+
+                let url;
+
+                if (customerId) {
+
+                    if (!/^\d+$/.test(customerId)) {
+                        result.innerHTML =
+                            '<div class="empty">Please enter a valid Customer ID.</div>';
+                        document.getElementById("customersPagination").innerHTML = "";
+                        return;
+                    }
+
+                    url =
+                        `/api/customer/${encodeURIComponent(customerId)}`;
+
+                } else {
+                    url = "/api/customers";
+                }
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    result.innerHTML =
+                        `<div class="empty">${data.message || "Unable to load customers."}</div>`;
+                    document.getElementById("customersPagination").innerHTML = "";
+                    return;
+                }
+
+                let customers = [];
+
+                if (data.customers) {
+                    customers = data.customers;
+                } else if (data.customer) {
+                    customers = [data.customer];
+                }
+
+                allCustomers = customers;
+                customersPage = 0;
+                renderCustomers(allCustomers);
+
+            } catch (error) {
+
+                result.innerHTML =
+                    '<div class="empty">Unable to connect to the CloudMart dashboard.</div>';
+
+                document.getElementById("customersPagination").innerHTML = "";
+            }
+        }
+
+        async function loadAllCustomers() {
+
+            const input =
+                document.getElementById("customerDetailsSearch");
+
+            const result =
+                document.getElementById("customerResult");
+
+            if (input.value.trim() !== "") {
+                return;
+            }
+
+            result.innerHTML =
+                '<div class="empty">Loading customers...</div>';
+
+            try {
+
+                const response =
+                    await fetch("/api/customers");
+
+                const data =
+                    await response.json();
+
+                if (!response.ok) {
+                    result.innerHTML =
+                        `<div class="empty">${data.message || "Unable to load customers."}</div>`;
+                    document.getElementById("customersPagination").innerHTML = "";
+                    return;
+                }
+
+                allCustomers = data.customers || [];
+                customersPage = 0;
+                renderCustomers(allCustomers);
+
+            } catch (error) {
+
+                result.innerHTML =
+                    '<div class="empty">Unable to connect to the CloudMart dashboard.</div>';
+
+                document.getElementById("customersPagination").innerHTML = "";
+            }
+        }
+
+
+        /* ================= ORDERS PAGINATION + SEARCH ================= */
+
+        let ordersPage = 0;
+
+        function getFilteredOrderRows() {
+
+            const search =
+                document.getElementById("customerSearch")
+                .value
+                .trim()
+                .toLowerCase();
+
+            const rows =
+                Array.from(document.querySelectorAll("#ordersTableBody .order-row"));
+
+            return rows.filter(function(row) {
+
+                const customerId =
+                    row.querySelector(".customer-id")
+                    .textContent
+                    .trim()
+                    .toLowerCase();
+
+                return search === "" || customerId.includes(search);
+            });
+        }
+
+        function renderOrders() {
+
+            const rows =
+                Array.from(document.querySelectorAll("#ordersTableBody .order-row"));
+
+            const filteredRows = getFilteredOrderRows();
+            const total = filteredRows.length;
+            const start = ordersPage * itemsPerPage;
+            const end = Math.min(start + itemsPerPage, total);
+
+            rows.forEach(function(row) {
+                row.style.display = "none";
+            });
+
+            filteredRows.slice(start, end).forEach(function(row) {
+                row.style.display = "";
+            });
+
+            renderPagination(
+                document.getElementById("ordersPagination"),
+                ordersPage,
+                total,
+                function(page) {
+                    ordersPage = page;
+                    renderOrders();
+                }
+            );
+        }
+
+        function filterOrders() {
+            ordersPage = 0;
+            renderOrders();
+        }
+
+
+        /* ================= LOAD CUSTOMERS ON PAGE LOAD ================= */
+
+        document.addEventListener("DOMContentLoaded", function() {
+
+            renderAllProducts();
+            renderOrders();
+
+            const customerSection =
+                document.getElementById("customers");
+
+            if (customerSection.classList.contains("active")) {
+                loadAllCustomers();
+            }
+
+        });
+
+    </script>
+
+<script>
+    const reports = {{ reports | tojson }};
+    let reportPage = 0;
+    const reportsPerPage = 5;
+
+    function renderReports() {
+        const reportList = document.getElementById("reportList");
+        const reportCount = document.getElementById("reportCount");
+
+        const start = reportPage * reportsPerPage;
+        const end = Math.min(
+            start + reportsPerPage,
+            reports.length
+        );
+
+        const pageReports = reports.slice(start, end);
+
+        reportList.innerHTML = "";
+
+        pageReports.forEach(report => {
+            const reportDiv = document.createElement("div");
+            reportDiv.className = "previous-report";
+
+            reportDiv.innerHTML = `
+                <div class="report-date">
+                    <div class="report-calendar">📅</div>
+
+                    <div class="report-details">
+                        <span class="report-date-text">
+                            ${report.date}
+                        </span>
+
+                        <span class="report-size">
+                            Daily Report
+                        </span>
+                    </div>
+                </div>
+
+                <a
+                    href="/report/download/${report.date}"
+                    class="report-download-button"
+                >
+                    ⬇ Download
+                </a>
+            `;
+
+            reportList.appendChild(reportDiv);
+        });
+
+        if (reports.length === 0) {
+            reportList.innerHTML = `
+                <p>No previous reports available.</p>
+            `;
+        }
+
+        if (reports.length > 0) {
+            reportCount.textContent =
+                `${start + 1} – ${end} of ${reports.length}`;
+        } else {
+            reportCount.textContent = "0 reports";
+        }
+
+        document.getElementById("previousReports").disabled =
+            reportPage === 0;
+
+        document.getElementById("nextReports").disabled =
+            end >= reports.length;
+    }
+
+    function changeReportPage(direction) {
+        const newPage = reportPage + direction;
+
+        if (
+            newPage >= 0 &&
+            newPage * reportsPerPage < reports.length
+        ) {
+            reportPage = newPage;
+            renderReports();
+        }
+    }
+
+    renderReports();
+</script>
+</body>
+</html>

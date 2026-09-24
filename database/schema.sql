@@ -1,14 +1,17 @@
-
-
 -- ============================================================
--- 1. CUSTOMERS
+-- 1. USERS
 -- ============================================================
 
-CREATE TABLE IF NOT EXISTS customers (
-    customer_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS users (
+    user_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     email VARCHAR(150) NOT NULL UNIQUE,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    password_hash VARCHAR(255),
+    role VARCHAR(20) NOT NULL DEFAULT 'customer',
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP
 );
 
 
@@ -27,6 +30,19 @@ CREATE TABLE IF NOT EXISTS products (
         ON UPDATE CURRENT_TIMESTAMP
 );
 
+
+CREATE TABLE login_history (
+    login_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    login_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+    login_status VARCHAR(20) NOT NULL,
+
+    CONSTRAINT fk_login_history_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(user_id)
+);
 
 -- ============================================================
 -- 3. INVENTORY
@@ -60,9 +76,9 @@ CREATE TABLE IF NOT EXISTS orders (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
         ON UPDATE CURRENT_TIMESTAMP,
 
-    CONSTRAINT fk_orders_customer
+    CONSTRAINT fk_orders_user
         FOREIGN KEY (customer_id)
-        REFERENCES customers(customer_id),
+        REFERENCES users(user_id),
 
     INDEX idx_orders_customer_id (customer_id)
 );
