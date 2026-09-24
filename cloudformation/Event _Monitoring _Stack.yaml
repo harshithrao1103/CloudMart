@@ -210,10 +210,25 @@ Resources:
                     "CloudMart/Operations",
                     "OrdersPlaced",
                     "Environment",
-                    "${Environment}"
+                    "${Environment}",
+                    {
+                      "stat": "Sum",
+                      "label": "OrdersPlaced",
+                      "color": "#1f77b4"
+                    }
+                  ],
+                  [
+                    "CloudMart/Operations",
+                    "OrdersPlacedLatency",
+                    "Environment",
+                    "${Environment}",
+                    {
+                      "stat": "Average",
+                      "label": "Latency (ms)",
+                      "color": "#ff7f0e"
+                    }
                   ]
                 ],
-                "stat": "Sum",
                 "period": 300
               }
             },
@@ -232,10 +247,25 @@ Resources:
                     "CloudMart/Operations",
                     "OrdersFailed",
                     "Environment",
-                    "${Environment}"
+                    "${Environment}",
+                    {
+                      "stat": "Sum",
+                      "label": "OrdersFailed",
+                      "color": "#1f77b4"
+                    }
+                  ],
+                  [
+                    "CloudMart/Operations",
+                    "OrdersFailedLatency",
+                    "Environment",
+                    "${Environment}",
+                    {
+                      "stat": "Average",
+                      "label": "Latency (ms)",
+                      "color": "#ff7f0e"
+                    }
                   ]
                 ],
-                "stat": "Sum",
                 "period": 300
               }
             },
@@ -254,10 +284,25 @@ Resources:
                     "CloudMart/Operations",
                     "LowStockEvents",
                     "Environment",
-                    "${Environment}"
+                    "${Environment}",
+                    {
+                      "stat": "Sum",
+                      "label": "LowStockEvents",
+                      "color": "#1f77b4"
+                    }
+                  ],
+                  [
+                    "CloudMart/Operations",
+                    "LowStockEventsLatency",
+                    "Environment",
+                    "${Environment}",
+                    {
+                      "stat": "Average",
+                      "label": "Latency (ms)",
+                      "color": "#ff7f0e"
+                    }
                   ]
                 ],
-                "stat": "Sum",
                 "period": 300
               }
             },
