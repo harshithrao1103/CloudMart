@@ -1,3 +1,35 @@
+# ============================================================
+# APPLICATION STACK - SECTION INDEX
+# ============================================================
+# PARAMETERS
+# RESOURCES
+# PYMYSQL LAMBDA LAYER
+# LAMBDA AUTHORISER
+# PRODUCT LAMBDA
+# CUSTOMER LAMBDA
+# LOGIN LAMBDA
+# DATABASE INITIALIZATION LAMBDA
+# ORDER LAMBDA
+# NOTIFICATION LAMBDA
+# MILESTONE 5 DASHBOARD LAMBDA
+# ALARM NOTIFICATION LAMBDA
+# MILESTONE 5 DAILY REPORT LAMBDA
+# MILESTONE 5 MONITORING LAMBDA
+# LOW STOCK METRICS RULE
+# ORDERS PLACED METRICS RULE
+# ORDERS FAILED METRICS RULE
+# ORDER FAILURE SQS QUEUE
+# API GATEWAY HTTP API
+# API GATEWAY -> AUTHORIZER LAMBDA PERMISSION
+# SNS LOW-STOCK TOPIC
+# SNS EMAIL SUBSCRIPTION
+# EVENTBRIDGE LOW-STOCK RULE
+# EVENTBRIDGE -> SNS PERMISSION
+# EVENTBRIDGE ORDER RULES
+# EVENTBRIDGE ORDER RULE -> NOTIFICATION LAMBDA PERMISSIONS
+# OUTPUTS
+# ============================================================
+
 AWSTemplateFormatVersion: '2010-09-09'
 
 Transform:
@@ -877,6 +909,7 @@ Resources:
             - true
       Targets:
         - Arn: !GetAtt LowStockMetricsLambda.Arn
+        #same as monitoring_lambda
           Id: LowStockMetricsLambdaTarget
 
   LowStockMetricsLambdaPermission:
@@ -904,6 +937,7 @@ Resources:
           - OrderConfirmed
       Targets:
         - Arn: !GetAtt LowStockMetricsLambda.Arn
+              #same as monitoring_lambda
           Id: OrdersPlacedMetricsLambdaTarget
 
   OrdersPlacedMetricsLambdaPermission:
@@ -931,6 +965,7 @@ Resources:
           - OrderFailed
       Targets:
         - Arn: !GetAtt LowStockMetricsLambda.Arn
+              #same as monitoring_lambda
           Id: OrdersFailedMetricsLambdaTarget
 
   OrdersFailedMetricsLambdaPermission:

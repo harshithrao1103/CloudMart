@@ -1,0 +1,72 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: >
+  CloudMart Milestone 5 Dashboard Lambda Stack.
+
+Parameters:
+
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - test
+      - prod
+    Description: CloudMart environment name
+
+Resources:
+
+  DashboardLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub CloudMart-${Environment}-DashboardLambda
+      Runtime: python3.12
+      Handler: dashboard_lambda.lambda_handler
+      Role:
+        Fn::ImportValue:
+          !Sub CloudMart-${Environment}-DashboardLambdaRoleArn
+      Timeout: 30
+      MemorySize: 256
+
+      VpcConfig:
+        SubnetIds:
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-PrivateSubnet1Id
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-PrivateSubnet2Id
+        SecurityGroupIds:
+          - Fn::ImportValue:
+              !Sub CloudMart-${Environment}-LambdaSecurityGroupId
+
+      Environment:
+        Variables:
+          RDS_HOST:
+            Fn::ImportValue:
+              !Sub CloudMart-${Environment}-RDSEndpoint
+
+          DB_NAME: cloudmart
+
+          DB_USER: admin
+
+          DB_PASSWORD_PARAMETER:
+            !Sub /cloudmart/${Environment}/db/password
+
+      Code:
+        S3Bucket:
+          Fn::ImportValue:
+            !Sub CloudMart-${Environment}-LambdaCodeBucketName
+        S3Key: lambda/dashboard/dashboard_lambda.zip
+
+Outputs:
+
+  DashboardLambdaArn:
+    Description: Milestone 5 Dashboard Lambda ARN
+    Value: !GetAtt DashboardLambda.Arn
+    Export:
+      Name: !Sub CloudMart-${Environment}-DashboardLambdaArn
+
+  DashboardLambdaName:
+    Description: Milestone 5 Dashboard Lambda Name
+    Value: !Ref DashboardLambda
+    Export:
+      Name: !Sub CloudMart-${Environment}-DashboardLambdaName

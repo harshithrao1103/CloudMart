@@ -1,3 +1,9 @@
+
+# Creates SNS topics/subscriptions, CloudWatch alarms, and
+# the CloudMart Operations Dashboard.
+#ALARMS and metrics
+# Low Stock, Orders Failed, Order Lambda Errors,
+# Product Lambda Errors, RDS CPU, API Gateway 5xx
 AWSTemplateFormatVersion: '2010-09-09'
 
 Description: CloudMart Milestone 5 Monitoring Stack.
@@ -27,7 +33,6 @@ Resources:
           Value: !Ref Environment
 
 
- 
 
 
   FormattedMonitoringTopic:
@@ -51,7 +56,7 @@ Resources:
     Properties:
       TopicArn: !Ref MonitoringTopic
       Protocol: lambda
-      Endpoint:
+      Endpoint:   
         Fn::ImportValue:
           !Sub CloudMart-${Environment}-AlarmNotificationLambdaArn
 

@@ -1,0 +1,17 @@
+[1mdiff --git a/cloudformation/Security_IAM_Stack.yaml b/cloudformation/Security_IAM_Stack.yaml[m
+[1mindex c80a3e0..ed22cb7 100644[m
+[1m--- a/cloudformation/Security_IAM_Stack.yaml[m
+[1m+++ b/cloudformation/Security_IAM_Stack.yaml[m
+[36m@@ -179,6 +179,12 @@[m [mResources:[m
+                   - ssm:GetParameter[m
+                 Resource: !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/cloudmart/${Environment}/db/password[m
+ [m
+[32m+[m[32m              # SES email verification[m
+[32m+[m[32m              - Effect: Allow[m
+[32m+[m[32m                Action:[m
+[32m+[m[32m                  - ses:CreateEmailIdentity[m
+[32m+[m[32m                Resource: '*'[m
+[32m+[m
+               # Lambda VPC networking[m
+               - Effect: Allow[m
+                 Action:[m

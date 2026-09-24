@@ -1,0 +1,5 @@
+{
+  "body": "{\"email\":\"harshithrao1.1103@gmail.com\",\"password\":\"Test@12345\"}",
+  "httpMethod": "POST",
+  "path": "/login"
+}

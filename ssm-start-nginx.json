@@ -1,0 +1,1 @@
+{"commands":["systemctl enable nginx","systemctl restart nginx","systemctl is-active nginx","curl -s -o /dev/null -w \u0027%{http_code}\u0027 http://127.0.0.1/"]}

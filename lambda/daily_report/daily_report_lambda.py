@@ -1,3 +1,20 @@
+# ============================================================
+# MILESTONE 5 - DAILY REPORT LAMBDA
+# Generates the daily CloudMart sales report.
+#
+# - Gets today's orders from RDS MySQL.
+# - Creates a CSV with order details.
+# - Calculates each customer's daily expenditure.
+# - Calculates total daily revenue.
+# - Uploads the CSV report to the S3 reports bucket.
+#
+# TRIGGER:
+# EventBridge Scheduler runs the Lambda daily at 11:59 PM IST.
+#
+# OUTPUT:
+# daily-report-YYYY-MM-DD.csv
+# ============================================================
+
 import os
 import csv
 import io
@@ -61,7 +78,9 @@ def lambda_handler(event, context):
         today = date.today().isoformat()
 
         output = io.StringIO()
+        #This creates a temporary text area in memory where the CSV content will be written.
         writer = csv.writer(output)
+        #creates csv
 
         writer.writerow(["CLOUDMART DAILY SALES REPORT"])
         writer.writerow(["Report Date", today])
@@ -119,6 +138,7 @@ def lambda_handler(event, context):
         writer.writerow(["Total Revenue", round(total_revenue, 2)])
 
         key = f"daily-report-{today}.csv"
+        #key is the object name/file name inside S3.
 
         s3.put_object(
             Bucket=REPORTS_BUCKET,

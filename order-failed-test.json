@@ -1,0 +1,8 @@
+[
+  {
+    "Source": "cloudmart.orders",
+    "DetailType": "OrderFailed",
+    "Detail": "{\"order_id\":9999,\"customer_id\":3,\"error\":\"Milestone 5 test failure\"}",
+    "EventBusName": "default"
+  }
+]

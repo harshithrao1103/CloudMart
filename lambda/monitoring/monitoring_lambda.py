@@ -1,3 +1,16 @@
+# ============================================================
+# MILESTONE 5 - MONITORING LAMBDA
+# Publishes custom CloudWatch metrics for CloudMart events.
+#
+# - OrderConfirmed → OrdersPlaced
+# - OrderFailed → OrdersFailed
+# - Low-stock Inventory Changed → LowStockEvents
+#
+# FLOW:
+# EventBridge → Monitoring Lambda → CloudWatch Custom Metrics
+# ============================================================
+
+
 import os
 import boto3
 

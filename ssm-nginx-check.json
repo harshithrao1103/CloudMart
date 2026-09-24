@@ -1,0 +1,1 @@
+{"commands":["nginx -t","systemctl is-active nginx","systemctl is-enabled nginx","journalctl -u nginx --no-pager -n 30"]}

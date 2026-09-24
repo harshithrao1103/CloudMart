@@ -1,3 +1,16 @@
+# Customer Lambda — Main Headings
+# AWS Clients
+# Email Verification
+# Environment Variables
+# Database Connection
+# HTTP Response
+# Password Hashing
+# Customer ID Extraction
+# Create Customer
+# Get Customer
+# Update Customer
+# Delete Customer / Soft Delete
+# Lambda Handler / API Routing
 import json
 import os
 import boto3

@@ -1,0 +1,1 @@
+{"commands":["mv /opt/cloudmart-dashboard/login.html /opt/cloudmart-dashboard/templates/login.html","chown ec2-user:ec2-user /opt/cloudmart-dashboard/templates/login.html","systemctl restart cloudmart-dashboard","curl -s -o /dev/null -w \u0027%{http_code}\u0027 http://127.0.0.1:8000/"]}

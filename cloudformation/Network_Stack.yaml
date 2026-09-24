@@ -1,3 +1,9 @@
+# Network Stack:
+# Creates the CloudMart VPC, public/private subnets, Internet Gateway,
+# route tables, SES Interface VPC Endpoint, and S3 Gateway VPC Endpoint.
+# Exports network resource IDs for use by other CloudFormation stacks.
+
+
 AWSTemplateFormatVersion: '2010-09-09'
 
 Description: >

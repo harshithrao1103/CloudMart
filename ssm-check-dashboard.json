@@ -1,0 +1,1 @@
+{"commands":["systemctl is-active cloudmart-dashboard","systemctl is-enabled cloudmart-dashboard","curl -s -o /dev/null -w \u0027%{http_code}\u0027 http://127.0.0.1:8000/"]}

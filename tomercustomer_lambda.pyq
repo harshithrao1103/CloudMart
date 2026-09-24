@@ -1,0 +1,13 @@
+[1mdiff --git a/lambda/customer/customer_lambda.py b/lambda/customer/customer_lambda.py[m
+[1mindex 0c29c8e..d2112b1 100644[m
+[1m--- a/lambda/customer/customer_lambda.py[m
+[1m+++ b/lambda/customer/customer_lambda.py[m
+[36m@@ -127,7 +127,7 @@[m [mdef create_customer(event):[m
+     try:[m
+ [m
+         body = json.loads(event.get("body") or "{}")[m
+[31m-         if isinstance(body, str):[m
+[32m+[m[32m        if isinstance(body, str):[m
+             body = json.loads(body)[m
+ [m
+     except json.JSONDecodeError:[m

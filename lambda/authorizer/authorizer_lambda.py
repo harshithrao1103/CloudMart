@@ -1,3 +1,17 @@
+# Authorizer Lambda
+# │
+# ├── Im++
+
+rts & AWS SSM
+# ├── Environment Variables
+# ├── Get Secret from SSM
+# ├── JWT Verification
+# ├── Lambda Handler
+# ├── Admin Token Check
+# ├── Customer JWT Check
+# └── Allow / Deny
+# HMAC → Hash-based Message Authentication Code
+# SHA-256 → Secure Hash Algorithm 256-bit
 import os
 import boto3
 import base64
@@ -20,6 +34,7 @@ ssm = boto3.client("ssm")
 
 AUTH_TOKEN_PARAMETER = os.environ["AUTH_TOKEN_PARAMETER"]
 JWT_SECRET_PARAMETER = os.environ["JWT_SECRET_PARAMETER"]
+#in application_stack
 
 
 # ============================================================

@@ -1,0 +1,15 @@
+{
+  "version": "2.0",
+  "type": "REQUEST",
+  "routeArn": "arn:aws:execute-api:us-east-1:598886663370:dqo4sq9bs6/dev/GET/products",
+  "rawPath": "/products",
+  "headers": {
+    "authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMSIsImVtYWlsIjoiaGFyc2hpdGhyYW8xLjExMDNAZ21haWwuY29tIiwicm9sZSI6ImN1c3RvbWVyIiwiaWF0IjoxNzg4OTM4MDgxLCJleHAiOjE3ODg5NDE2ODF9.O-RPoNu5I58hVCZh2Z2GSvIIqMhzRutFGvs_ft2puaU"
+  },
+  "requestContext": {
+    "http": {
+      "method": "GET",
+      "path": "/products"
+    }
+  }
+}

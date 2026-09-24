@@ -40,7 +40,7 @@ def lambda_handler(event, context):
 
     elif "rds-cpu" in alarm_name:
         alarm_title = "RDS CPU Utilization"
-        metric_name = "CPUUtilization"
+        metric_name = "CPUUtilization"  
         threshold = 80
         threshold_text = "> 80%"
 

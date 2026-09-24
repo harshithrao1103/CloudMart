@@ -1,3 +1,21 @@
+# ============================================================
+# MILESTONE 5 - DASHBOARD LAMBDA
+# Handles dashboard APIs for products, orders, and customers.
+#
+# - Connects to RDS MySQL using credentials from SSM.
+# - Gets active products and inventory details.
+# - Gets recent order details.
+# - Gets all active customers or a customer by customer_id.
+# - Returns data as JSON responses.
+#
+# API ROUTES:
+# GET /dashboard/products
+# GET /dashboard/orders
+# GET /dashboard/customers
+# GET /dashboard/customers?customer_id=<id>
+# ============================================================
+
+
 import json
 import os
 import boto3
@@ -34,7 +52,7 @@ def get_db_connection():
 def serialize(value):
     if isinstance(value, Decimal):
         return float(value)
-
+#date->object ->string format
     if hasattr(value, "isoformat"):
         return value.isoformat()
 
@@ -47,6 +65,7 @@ def response(status_code, body):
         "headers": {
             "Content-Type": "application/json",
             "Access-Control-Allow-Origin": "*"
+#Allows the dashboard frontend to make requests to this API.
         },
         "body": json.dumps(body, default=serialize)
     }
@@ -73,6 +92,7 @@ def get_products():
             """)
 
             products = cursor.fetchall()
+#This stores all returned product rows.
 
         return response(
             200,

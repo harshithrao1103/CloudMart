@@ -1,3 +1,8 @@
+
+
+# Storage & Database Stack:
+# Creates RDS MySQL, S3 reports storage, DB subnet group,
+# and SSM parameters used by the CloudMart application.
 AWSTemplateFormatVersion: '2010-09-09'
 
 Description: >

@@ -1,0 +1,1 @@
+{"commands":["ls -lh /opt/cloudmart-dashboard/templates/login.html /opt/cloudmart-dashboard/templates/dashboard.html","systemctl is-active cloudmart-dashboard","journalctl -u cloudmart-dashboard --no-pager -n 25"]}

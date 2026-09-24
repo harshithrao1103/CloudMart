@@ -1,0 +1,65 @@
+[1mdiff --git a/lambda/order/order_lambda.py b/lambda/order/order_lambda.py[m
+[1mindex be3c19c..b0dbc6c 100644[m
+[1m--- a/lambda/order/order_lambda.py[m
+[1m+++ b/lambda/order/order_lambda.py[m
+[36m@@ -300,9 +300,9 @@[m [mdef create_order(event):[m
+ [m
+             cursor.execute([m
+                 """[m
+[31m-                SELECT customer_id, email[m
+[31m-                FROM customers[m
+[31m-                WHERE customer_id = %s[m
+[32m+[m[32m                SELECT user_id, email[m
+[32m+[m[32m                FROM users[m
+[32m+[m[32m                WHERE user_id = %s[m
+                 """,[m
+                 (customer_id,)[m
+             )[m
+[36m@@ -660,9 +660,11 @@[m [mdef get_customer_orders(customer_id):[m
+ [m
+             cursor.execute([m
+                 """[m
+[31m-                SELECT customer_id[m
+[31m-                FROM customers[m
+[31m-                WHERE customer_id = %s[m
+[32m+[m[32m                SELECT user_id[m
+[32m+[m[32m                FROM users[m
+[32m+[m[32m                WHERE user_id = %s[m
+[32m+[m[32m                  AND role = 'customer'[m
+[32m+[m[32m                  AND is_active = 1[m
+                 """,[m
+                 (customer_id,)[m
+             )[m
+[36m@@ -789,8 +791,8 @@[m [mdef update_order(event, order_id):[m
+                     o.customer_id,[m
+                     c.email AS customer_email[m
+                 FROM orders o[m
+[31m-                INNER JOIN customers c[m
+[31m-                    ON o.customer_id = c.customer_id[m
+[32m+[m[32m                INNER JOIN users c[m
+[32m+[m[32m                    ON o.customer_id = c.user_id[m
+                 WHERE o.order_id = %s[m
+                 FOR UPDATE[m
+                 """,[m
+[36m@@ -1089,8 +1091,8 @@[m [mdef update_order_items(event, order_id):[m
+                     o.status,[m
+                     c.email AS customer_email[m
+                 FROM orders o[m
+[31m-                INNER JOIN customers c[m
+[31m-                    ON o.customer_id = c.customer_id[m
+[32m+[m[32m                INNER JOIN users c[m
+[32m+[m[32m                    ON o.customer_id = c.user_id[m
+                 WHERE o.order_id = %s[m
+                 FOR UPDATE[m
+                 """,[m
+[36m@@ -1370,8 +1372,8 @@[m [mdef cancel_order(event, order_id):[m
+                     o.customer_id,[m
+                     c.email AS customer_email[m
+                 FROM orders o[m
+[31m-                INNER JOIN customers c[m
+[31m-                    ON o.customer_id = c.customer_id[m
+[32m+[m[32m                INNER JOIN users c[m
+[32m+[m[32m                    ON o.customer_id = c.user_id[m
+                 WHERE o.order_id = %s[m
+                 FOR UPDATE[m
+                 """,[m

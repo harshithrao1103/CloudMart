@@ -33,7 +33,7 @@ def get_db_password():
 
     response = ssm.get_parameter(
         Name=DB_PASSWORD_PARAMETER,
-        WithDecryption=True
+        #WithDecryption=True
     )
 
     return response["Parameter"]["Value"]
