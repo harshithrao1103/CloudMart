@@ -34,6 +34,7 @@ s3 = boto3.client("s3")
 def login():
     if request.method == "POST":
         token = request.form.get("token")
+        #get token value from login
 
         if not token:
             return render_template(
@@ -125,8 +126,6 @@ def dashboard():
         orders=orders,
         reports=reports
     )
-
-        
 @app.route("/api/customers")
 def customers():
     token = session.get("admin_token")
@@ -217,7 +216,7 @@ def get_previous_reports():
 
         for obj in response.get("Contents", []):
             key = obj["Key"]
-
+            #fileame/path
             if key.startswith("daily-report-") and key.endswith(".csv"):
                 date_part = key.replace("daily-report-", "").replace(".csv", "")
 
@@ -263,6 +262,7 @@ def get_report_url(download=False):
         return None
 
     response = s3.generate_presigned_url(
+        #head_object() checks the S3 object without downloading the file.
         "get_object",
         Params={
             "Bucket": REPORTS_BUCKET,
@@ -348,6 +348,7 @@ def download_previous_report(report_date):
             "Key": key,
             "ResponseContentType": "text/csv",
             "ResponseContentDisposition": f'attachment; filename="{key}"'
+            #This tells the browser to download the CSV rather than open it.
         },
         ExpiresIn=300
     )

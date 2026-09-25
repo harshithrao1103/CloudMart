@@ -27,9 +27,6 @@ Resources:
           Value: !Ref Environment
 
 
- 
-
-
   FormattedMonitoringTopic:
     Type: AWS::SNS::Topic
     Properties:
@@ -45,6 +42,7 @@ Resources:
       TopicArn: !Ref FormattedMonitoringTopic
       Protocol: email
       Endpoint: !Ref NotificationEmail
+
 
   AlarmNotificationSubscription:
     Type: AWS::SNS::Subscription
@@ -166,7 +164,7 @@ Resources:
       AlarmActions:
         - !Ref MonitoringTopic
 
-  
+
   ApiGateway5xxErrorsAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
@@ -186,7 +184,6 @@ Resources:
       AlarmActions:
         - !Ref MonitoringTopic
 
- 
 
   OperationsDashboard:
     Type: AWS::CloudWatch::Dashboard
@@ -409,10 +406,53 @@ Resources:
                 "stat": "Average",
                 "period": 300
               }
+            },
+            {
+              "type": "metric",
+              "x": 12,
+              "y": 12,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "title": "EC2 Network In",
+                "view": "timeSeries",
+                "region": "${AWS::Region}",
+                "metrics": [
+                  [
+                    "AWS/EC2",
+                    "NetworkIn",
+                    "InstanceId",
+                    "i-0aaf6168396487377"
+                  ]
+                ],
+                "stat": "Sum",
+                "period": 300
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0,
+              "y": 18,
+              "width": 12,
+              "height": 6,
+              "properties": {
+                "title": "EC2 Network Out",
+                "view": "timeSeries",
+                "region": "${AWS::Region}",
+                "metrics": [
+                  [
+                    "AWS/EC2",
+                    "NetworkOut",
+                    "InstanceId",
+                    "i-0aaf6168396487377"
+                  ]
+                ],
+                "stat": "Sum",
+                "period": 300
+              }
             }
           ]
         }
-
 
 
 Outputs:
