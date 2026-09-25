@@ -278,12 +278,12 @@ jobs:
             --template-body "file://cloudformation/Event _Monitoring _Stack.yaml"
 
       - name: Verify Dashboard Name
-          run: |
-            echo "Commit:"
-            git rev-parse HEAD
-            echo "Dashboard name in template:"
-            grep "DashboardName:" "cloudformation/Event _Monitoring _Stack.yaml"
-
+        run: |
+          echo "Commit:"
+          git rev-parse HEAD
+          echo "Dashboard name in template:"
+          grep "DashboardName:" "cloudformation/Event _Monitoring _Stack.yaml"
+          
       - name: Deploy Monitoring Stack
         run: |
           aws cloudformation deploy \
