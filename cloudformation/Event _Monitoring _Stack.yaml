@@ -188,7 +188,7 @@ Resources:
   OperationsDashboard:
     Type: AWS::CloudWatch::Dashboard
     Properties:
-      DashboardName: !Sub cloudmart-operations
+      DashboardName: !Sub cloudmart-${Environment}-operations
       DashboardBody: !Sub |
         {
           "widgets": [
