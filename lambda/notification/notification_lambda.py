@@ -202,17 +202,30 @@ def lambda_handler(event, context):
                 })
             }
 
-        if order_id:
-            order_id_text = f"#{order_id}"
-        else:
-            order_id_text = "your order"
-
         subject = "CloudMart Order Failed"
 
-        body = f"""
+        if order_id:
+
+            body = f"""
 Hello,
 
-We are sorry, but your CloudMart order {order_id_text} could not be placed successfully.
+We are sorry, but your CloudMart order #{order_id} could not be placed successfully.
+
+There was a temporary technical issue while processing your order.
+Please try placing the order again after some time.
+
+If you continue to face the issue, please contact CloudMart support.
+
+Regards,
+CloudMart Team
+"""
+
+        else:
+
+            body = """
+Hello,
+
+We are sorry, but we could not place your CloudMart order successfully.
 
 There was a temporary technical issue while processing your order.
 Please try placing the order again after some time.
@@ -401,7 +414,7 @@ CloudMart Team
         },
         Message={
             "Subject": {
-                "Data": subject
+                "Data":subject
             },
             "Body": {
                 "Text": {
