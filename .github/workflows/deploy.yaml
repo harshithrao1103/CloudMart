@@ -306,7 +306,7 @@ jobs:
       - name: Deploy EC2 Dashboard Infrastructure
         run: |
           aws cloudformation deploy \
-            --stack-name cloudmart-ec2-dashboard-${{ inputs.environment }} \
+            --stack-name cloudmart-milestone5-ec2-${{ inputs.environment }} \
             --template-file cloudformation/Milestone5_EC2_Stack.yaml \
             --parameter-overrides \
               Environment=${{ inputs.environment }} \
@@ -393,7 +393,7 @@ jobs:
         run: |
 
           EC2_INSTANCE_ID=$(aws cloudformation describe-stacks \
-            --stack-name cloudmart-ec2-dashboard-${{ inputs.environment }} \
+            --stack-name cloudmart-milestone5-ec2-${{ inputs.environment }} \
             --query "Stacks[0].Outputs[?OutputKey=='DashboardEC2InstanceId'].OutputValue" \
             --output text)
 
