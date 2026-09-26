@@ -217,8 +217,6 @@ We are sorry, but your CloudMart order {order_id_text} could not be placed succe
 There was a temporary technical issue while processing your order.
 Please try placing the order again after some time.
 
-No payment should be considered successful for this failed order.
-
 If you continue to face the issue, please contact CloudMart support.
 
 Regards,
