@@ -191,6 +191,91 @@ def lambda_handler(event, context):
     order_id = detail.get("order_id")
 
 
+    if event_type == "OrderFailed":
+
+        if not customer_email:
+            print("Customer email not found in OrderFailed event")
+            return {
+                "statusCode": 400,
+                "body": json.dumps({
+                    "message": "Customer email is missing"
+                })
+            }
+
+        if order_id:
+            order_id_text = f"#{order_id}"
+        else:
+            order_id_text = "your order"
+
+        subject = "CloudMart Order Failed"
+
+        body = f"""
+Hello,
+
+We are sorry, but your CloudMart order {order_id_text} could not be placed successfully.
+
+There was a temporary technical issue while processing your order.
+Please try placing the order again after some time.
+
+No payment should be considered successful for this failed order.
+
+If you continue to face the issue, please contact CloudMart support.
+
+Regards,
+CloudMart Team
+"""
+
+        try:
+            response = ses.send_email(
+                Source=SENDER_EMAIL,
+                Destination={
+                    "ToAddresses": [
+                        customer_email
+                    ]
+                },
+                Message={
+                    "Subject": {
+                        "Data": subject
+                    },
+                    "Body": {
+                        "Text": {
+                            "Data": body
+                        }
+                    }
+                }
+            )
+
+            print(
+                f"OrderFailed email sent successfully to "
+                f"{customer_email}"
+            )
+
+            print(
+                f"SES Message ID: "
+                f"{response['MessageId']}"
+            )
+
+            return {
+                "statusCode": 200,
+                "body": json.dumps({
+                    "message": "OrderFailed notification email sent successfully",
+                    "message_id": response["MessageId"]
+                })
+            }
+
+        except Exception as error:
+            print(
+                f"Failed to send OrderFailed email: "
+                f"{error}"
+            )
+
+            return {
+                "statusCode": 500,
+                "body": json.dumps({
+                    "message": "Failed to send OrderFailed notification email"
+                })
+            }
+
     # --------------------------------------------------------
     # Validate customer email
     # --------------------------------------------------------

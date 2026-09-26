@@ -1292,6 +1292,32 @@ Resources:
           Id: OrderItemChangedNotificationTarget
 
 
+  OrderFailedNotificationRule:
+    Type: AWS::Events::Rule
+
+    Properties:
+
+      Name: !Sub cloudmart-${Environment}-order-failed-notification
+
+      Description: >
+        Captures CloudMart order failure events for customer notification
+
+      State: ENABLED
+
+      EventPattern:
+
+        source:
+          - cloudmart.orders
+
+        detail-type:
+          - OrderFailed
+
+      Targets:
+
+        - Arn: !GetAtt NotificationLambda.Arn
+          Id: OrderFailedNotificationTarget
+
+
   # ==========================================================
   # EVENTBRIDGE ORDER RULE -> NOTIFICATION LAMBDA PERMISSIONS
   # ==========================================================
@@ -1354,6 +1380,15 @@ Resources:
       FunctionName: !GetAtt NotificationLambda.Arn
       Principal: events.amazonaws.com
       SourceArn: !GetAtt OrderItemChangedRule.Arn
+
+  OrderFailedNotificationPermission:
+    Type: AWS::Lambda::Permission
+
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt NotificationLambda.Arn
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt OrderFailedNotificationRule.Arn
 
 
 # ============================================================

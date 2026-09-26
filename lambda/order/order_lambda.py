@@ -200,7 +200,7 @@ def parse_request_body(event):
     #
     # This handles both:
     #
-    # {"customer_id": 11, "items": [...]}
+    # {"customer_id": 11, "customer_email": "customer@example.com", "items": [...]}
     #
     # and JSON encoded versions of the above.
     # --------------------------------------------------------
@@ -505,7 +505,7 @@ def publish_order_event(detail_type, detail):
 
 def create_order(event):
 
-    # --------------------- -----------------------------------
+    # --------------------------------------------------------
     # Parse request body
     # --------------------------------------------------------
 
@@ -532,6 +532,7 @@ def create_order(event):
     # --------------------------------------------------------
 
     customer_id = body.get("customer_id")
+    customer_email = body.get("customer_email")
     items = body.get("items")
 
     # --------------------------------------------------------
@@ -553,6 +554,21 @@ def create_order(event):
                 "message": "Invalid customer_id"
             }
         )
+
+    # --------------------------------------------------------
+    # Validate customer email
+    # --------------------------------------------------------
+
+    if not isinstance(customer_email, str) or not customer_email.strip():
+
+        return response(
+            400,
+            {
+                "message": "Invalid customer_email"
+            }
+        )
+
+    customer_email = customer_email.strip()
 
     # --------------------------------------------------------
     # Validate items
@@ -583,7 +599,43 @@ def create_order(event):
             }
         )
 
-    connection = get_db_connection()
+    connection = None
+    order_id = None
+
+    # ========================================================
+    # RDS CONNECTION
+    # ========================================================
+
+    try:
+
+        connection = get_db_connection()
+
+    except Exception as error:
+
+        error_message = str(error)
+
+        print(
+            "RDS connection error:",
+            error_message
+        )
+
+        publish_order_event(
+            "OrderFailed",
+            {
+                "order_id": None,
+                "customer_id": customer_id,
+                "customer_email": customer_email,
+                "failure_type": "RDS_CONNECTION_FAILURE",
+                "error": error_message
+            }
+        )
+
+        return response(
+            500,
+            {
+                "message": "Internal server error"
+            }
+        )
 
     try:
 
@@ -616,6 +668,8 @@ def create_order(event):
                         "message": "Customer not found"
                     }
                 )
+
+            customer_email = customer["email"]
 
             total_amount = Decimal("0.00")
 
@@ -750,6 +804,7 @@ def create_order(event):
                         "unit_price": unit_price
                     }
                 )
+
             # =================================================
             # DEDUCT INVENTORY
             #
@@ -891,31 +946,42 @@ def create_order(event):
         # COMMIT
         # =====================================================
 
-        # =====================================================
-        # PUBLISH EVENT
-        # =====================================================
-
         connection.commit()
 
         # =================================================
         # PUBLISH INVENTORY CHANGED EVENTS
+        #
+        # EventBridge failure here must NOT make the order
+        # an OrderFailed because the database transaction
+        # has already been committed.
         # =================================================
-        for inventory_change in inventory_changes:
 
-            events.put_events(
-                Entries=[
-                    {
-                        "EventBusName": EVENT_BUS_NAME,
-                        "Source": "cloudmart.product",
-                        "DetailType": "Inventory Changed",
-                        "Detail": json.dumps(inventory_change)
-                    }
-                ]
+        try:
+
+            for inventory_change in inventory_changes:
+
+                events.put_events(
+                    Entries=[
+                        {
+                            "EventBusName": EVENT_BUS_NAME,
+                            "Source": "cloudmart.product",
+                            "DetailType": "Inventory Changed",
+                            "Detail": json.dumps(inventory_change)
+                        }
+                    ]
+                )
+
+        except Exception as error:
+
+            print(
+                "Inventory event publishing error:",
+                str(error)
             )
 
         # =================================================
         # PUBLISH ORDER CONFIRMED EVENT
         # =================================================
+
         publish_order_event(
             "OrderConfirmed",
             {
@@ -939,13 +1005,36 @@ def create_order(event):
             }
         )
 
+    # ========================================================
+    # ORDER CREATION FAILURE
+    # ========================================================
+
     except Exception as error:
 
-        connection.rollback()
+        try:
+
+            connection.rollback()
+
+        except Exception as rollback_error:
+
+            print(
+                "Rollback error:",
+                str(rollback_error)
+            )
+
+        error_message = str(error)
+
+        if isinstance(error, pymysql.MySQLError):
+
+            failure_type = "RDS_QUERY_TRANSACTION_FAILURE"
+
+        else:
+
+            failure_type = "SERVER_APPLICATION_ERROR"
 
         print(
             "Create order error:",
-            str(error)
+            error_message
         )
 
         publish_order_event(
@@ -953,7 +1042,9 @@ def create_order(event):
             {
                 "order_id": order_id,
                 "customer_id": customer_id,
-                "error": str(error)
+                "customer_email": customer_email,
+                "failure_type": failure_type,
+                "error": error_message
             }
         )
 
@@ -966,8 +1057,9 @@ def create_order(event):
 
     finally:
 
-        connection.close()
+        if connection:
 
+            connection.close()
 
 # ============================================================
 # GET ORDER
