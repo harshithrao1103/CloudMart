@@ -41,6 +41,13 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ARN_ROLE }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Update GitHub Actions IAM Policy
+        run: |
+          aws iam put-role-policy \
+            --role-name CloudMart-GitHubActions-Role \
+            --policy-name CloudMartGitHubActionsDeployment \
+            --policy-document file://github-actions-policy.json
+
       - name: Verify AWS identity
         run: aws sts get-caller-identity
 
