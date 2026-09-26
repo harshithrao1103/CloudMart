@@ -1460,3 +1460,12 @@ Outputs:
 
     Export:
       Name: !Sub CloudMart-${Environment}-AlarmNotificationLambdaArn
+
+
+  ApiGatewayId:
+    Description: CloudMart API Gateway ID
+
+    Value: !Ref CloudMartApi
+
+    Export:
+      Name: !Sub CloudMart-${Environment}-ApiGatewayId
