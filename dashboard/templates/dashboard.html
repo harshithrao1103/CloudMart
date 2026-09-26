@@ -302,6 +302,11 @@
             color: #166534;
         }
 
+        .status.cancelled {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
         /* ================= TOP PRODUCTS ================= */
 
         .top-products {
@@ -868,7 +873,7 @@
                                     </td>
 
                                     <td>
-                                        <span class="status">
+                                        <span class="status {% if order.status|lower == 'cancelled' %}cancelled{% endif %}">
                                             {{ order.status }}
                                         </span>
                                     </td>
@@ -1215,7 +1220,7 @@
                                     </td>
 
                                     <td>
-                                        <span class="status">
+                                        <span class="status {% if order.status|lower == 'cancelled' %}cancelled{% endif %}">
                                             {{ order.status }}
                                         </span>
                                     </td>
