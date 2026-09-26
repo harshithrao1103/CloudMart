@@ -240,7 +240,7 @@
             "Action": [
                 "ssm:SendCommand",
                 "ssm:GetCommandInvocation",
-                "ssm:GetCommandInvocation"
+                "ssm:DescribeInstanceInformation"
             ],
             "Resource": "*"
         }
