@@ -239,6 +239,7 @@
             "Effect": "Allow",
             "Action": [
                 "ssm:SendCommand",
+                "ssm:GetCommandInvocation",
                 "ssm:GetCommandInvocation"
             ],
             "Resource": "*"
