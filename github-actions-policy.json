@@ -54,7 +54,14 @@
                 "ec2:CreateVpcEndpoint",
                 "ec2:DeleteVpcEndpoints",
                 "ec2:DescribeVpcEndpoints",
-                "ec2:ModifyVpcEndpoint"
+                "ec2:ModifyVpcEndpoint",
+                "ec2:RunInstances",
+                "ec2:TerminateInstances",
+                "ec2:DescribeInstances",
+                "ec2:DescribeInstanceStatus",
+                "ec2:AssociateIamInstanceProfile",
+                "ec2:DisassociateIamInstanceProfile",
+                "ec2:ReplaceIamInstanceProfileAssociation"
             ],
             "Resource": "*"
         },
