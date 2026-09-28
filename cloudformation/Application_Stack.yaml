@@ -19,7 +19,6 @@ Parameters:
 
   Environment:
     Type: String
-    Default: dev
     AllowedValues:
       - dev
       - test
@@ -33,7 +32,6 @@ Parameters:
   SenderEmail:
     Type: String
     Description: Verified SES sender email for order notifications
-
 
 # ============================================================
 # RESOURCES

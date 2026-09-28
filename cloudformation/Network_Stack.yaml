@@ -9,7 +9,6 @@ Parameters:
 
   Environment:
     Type: String
-    Default: dev
     AllowedValues:
       - dev
       - test
@@ -18,24 +17,19 @@ Parameters:
 
   VpcCidr:
     Type: String
-    Default: 10.0.0.0/16
     Description: CIDR block for the CloudMart VPC
 
   PublicSubnetCidr:
     Type: String
-    Default: 10.0.1.0/24
     Description: CIDR block for the public subnet
 
   PrivateSubnet1Cidr:
     Type: String
-    Default: 10.0.2.0/24
     Description: CIDR block for the first private subnet
 
   PrivateSubnet2Cidr:
     Type: String
-    Default: 10.0.3.0/24
     Description: CIDR block for the second private subnet
-
 
 Resources:
 

@@ -2,16 +2,6 @@ name: CloudMart Deployment
 
 on:
   workflow_dispatch:
-    inputs:
-      environment:
-        description: "Select CloudMart environment"
-        required: true
-        default: dev
-        type: choice
-        options:
-          - dev
-          - test
-          - prod
 
 permissions:
   id-token: write
@@ -23,15 +13,49 @@ env:
 jobs:
 
   # ==================================================
+  # LOAD CONFIGURATION
+  # ==================================================
+
+  load-config:
+    name: Load CloudMart Configuration
+    runs-on: ubuntu-latest
+
+    outputs:
+      environment: ${{ steps.config.outputs.environment }}
+      vpc_cidr: ${{ steps.config.outputs.vpc_cidr }}
+      public_subnet_cidr: ${{ steps.config.outputs.public_subnet_cidr }}
+      private_subnet1_cidr: ${{ steps.config.outputs.private_subnet1_cidr }}
+      private_subnet2_cidr: ${{ steps.config.outputs.private_subnet2_cidr }}
+      db_name: ${{ steps.config.outputs.db_name }}
+      db_username: ${{ steps.config.outputs.db_username }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Load configuration
+        id: config
+        shell: bash
+        run: |
+          echo "environment=$(jq -r '.Environment' config.json)" >> "$GITHUB_OUTPUT"
+          echo "vpc_cidr=$(jq -r '.VpcCidr' config.json)" >> "$GITHUB_OUTPUT"
+          echo "public_subnet_cidr=$(jq -r '.PublicSubnetCidr' config.json)" >> "$GITHUB_OUTPUT"
+          echo "private_subnet1_cidr=$(jq -r '.PrivateSubnet1Cidr' config.json)" >> "$GITHUB_OUTPUT"
+          echo "private_subnet2_cidr=$(jq -r '.PrivateSubnet2Cidr' config.json)" >> "$GITHUB_OUTPUT"
+          echo "db_name=$(jq -r '.DBName' config.json)" >> "$GITHUB_OUTPUT"
+          echo "db_username=$(jq -r '.DBUsername' config.json)" >> "$GITHUB_OUTPUT"
+
+
+  # ==================================================
   # NETWORK STACK
   # ==================================================
 
   deploy-network:
     name: Deploy Network Stack
     runs-on: ubuntu-latest
+    needs: load-config
 
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -57,25 +81,37 @@ jobs:
             --template-body file://cloudformation/Network_Stack.yaml
 
       - name: Deploy Network Stack
+        env:
+          CF_ENVIRONMENT: ${{ needs.load-config.outputs.environment }}
+          VPC_CIDR: ${{ needs.load-config.outputs.vpc_cidr }}
+          PUBLIC_SUBNET_CIDR: ${{ needs.load-config.outputs.public_subnet_cidr }}
+          PRIVATE_SUBNET1_CIDR: ${{ needs.load-config.outputs.private_subnet1_cidr }}
+          PRIVATE_SUBNET2_CIDR: ${{ needs.load-config.outputs.private_subnet2_cidr }}
         run: |
           aws cloudformation deploy \
-            --stack-name cloudmart-network-${{ inputs.environment }} \
+            --stack-name "cloudmart-network-${CF_ENVIRONMENT}" \
             --template-file cloudformation/Network_Stack.yaml \
-            --parameter-overrides Environment=${{ inputs.environment }} \
+            --parameter-overrides \
+              Environment="$CF_ENVIRONMENT" \
+              VpcCidr="$VPC_CIDR" \
+              PublicSubnetCidr="$PUBLIC_SUBNET_CIDR" \
+              PrivateSubnet1Cidr="$PRIVATE_SUBNET1_CIDR" \
+              PrivateSubnet2Cidr="$PRIVATE_SUBNET2_CIDR" \
             --capabilities CAPABILITY_NAMED_IAM
 
 
   # ==================================================
-  # SECURITY AND IAM STACK
+  # SECURITY AND IAM
   # ==================================================
 
   deploy-security-iam:
     name: Deploy Security and IAM Stack
     runs-on: ubuntu-latest
-    needs: deploy-network
+    needs:
+      - load-config
+      - deploy-network
 
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -94,40 +130,31 @@ jobs:
             --template-body file://cloudformation/Security_IAM_Stack.yaml
 
       - name: Deploy Security and IAM Stack
+        env:
+          CF_ENVIRONMENT: ${{ needs.load-config.outputs.environment }}
         run: |
           aws cloudformation deploy \
-            --stack-name cloudmart-security-iam-${{ inputs.environment }} \
+            --stack-name "cloudmart-security-iam-${CF_ENVIRONMENT}" \
             --template-file cloudformation/Security_IAM_Stack.yaml \
             --parameter-overrides \
-              Environment=${{ inputs.environment }} \
-              SenderEmail="${{ secrets.SENDER_EMAIL }}" \
+              Environment="$CF_ENVIRONMENT" \
             --capabilities CAPABILITY_NAMED_IAM
 
 
   # ==================================================
-  # DATA / STORAGE STACK
+  # DATA / STORAGE
   # ==================================================
 
   deploy-data:
     name: Deploy Data Storage Stack
     runs-on: ubuntu-latest
-    needs: deploy-security-iam
+    needs:
+      - load-config
+      - deploy-security-iam
 
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Verify Data Stack File
-        run: |
-          echo "Current commit:"
-          git rev-parse HEAD
-
-          echo "CloudFormation files:"
-          git ls-files cloudformation
-
-          echo "Storage Data Stack:"
-          ls -la cloudformation/Storage_Database_Stack.yaml
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -144,14 +171,18 @@ jobs:
             --template-body file://cloudformation/Storage_Database_Stack.yaml
 
       - name: Deploy Data Storage Stack
+        env:
+          CF_ENVIRONMENT: ${{ needs.load-config.outputs.environment }}
+          DB_NAME: ${{ needs.load-config.outputs.db_name }}
+          DB_USERNAME: ${{ needs.load-config.outputs.db_username }}
         run: |
           aws cloudformation deploy \
-            --stack-name cloudmart-data-${{ inputs.environment }} \
+            --stack-name "cloudmart-data-${CF_ENVIRONMENT}" \
             --template-file cloudformation/Storage_Database_Stack.yaml \
             --parameter-overrides \
-              Environment=${{ inputs.environment }} \
-              DBName=cloudmart \
-              DBUsername=admin \
+              Environment="$CF_ENVIRONMENT" \
+              DBName="$DB_NAME" \
+              DBUsername="$DB_USERNAME" \
               DBPassword="${{ secrets.DB_PASSWORD }}" \
               AuthToken="${{ secrets.AUTH_TOKEN }}" \
               JWTSecret="${{ secrets.JWT_SECRET }}" \
@@ -159,16 +190,17 @@ jobs:
 
 
   # ==================================================
-  # APPLICATION STACK - MILESTONE 4
+  # APPLICATION STACK
   # ==================================================
 
   deploy-application:
     name: Deploy Application Stack
     runs-on: ubuntu-latest
-    needs: deploy-data
+    needs:
+      - load-config
+      - deploy-data
 
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -189,92 +221,71 @@ jobs:
           sam validate \
             --template-file cloudformation/Application_Stack.yaml
 
-      # ------------------------------------------------
-      # Prepare Database Initialization Lambda
-      # ------------------------------------------------
-
       - name: Prepare Database Schema
         run: |
           cp database/schema.sql lambda/db_init/schema.sql
-
-      # ------------------------------------------------
-      # Build SAM application
-      # ------------------------------------------------
 
       - name: Build SAM Application
         run: |
           sam build \
             --template-file cloudformation/Application_Stack.yaml
 
-      # ------------------------------------------------
-      # Create / Verify SAM Artifact Bucket
-      # ------------------------------------------------
-
       - name: Ensure SAM Artifact Bucket Exists
+        env:
+          CF_ENVIRONMENT: ${{ needs.load-config.outputs.environment }}
         run: |
           ACCOUNT_ID=$(aws sts get-caller-identity \
             --query Account \
             --output text)
 
-          BUCKET_NAME="cloudmart-${{ inputs.environment }}-sam-artifacts-${ACCOUNT_ID}"
-
-          echo "SAM artifact bucket: $BUCKET_NAME"
+          BUCKET_NAME="cloudmart-${CF_ENVIRONMENT}-sam-artifacts-${ACCOUNT_ID}"
 
           if aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
-            echo "Bucket already exists."
+            echo "SAM artifact bucket already exists."
           else
-            echo "Creating bucket..."
-
+            echo "Creating SAM artifact bucket..."
             aws s3api create-bucket \
               --bucket "$BUCKET_NAME" \
-              --region "${{ env.AWS_REGION }}"
+              --region "${AWS_REGION}"
           fi
 
-      # ------------------------------------------------
-      # Deploy SAM Application
-      # ------------------------------------------------
-
       - name: Deploy SAM Application
+        env:
+          CF_ENVIRONMENT: ${{ needs.load-config.outputs.environment }}
         run: |
-
           ACCOUNT_ID=$(aws sts get-caller-identity \
             --query Account \
             --output text)
 
-          BUCKET_NAME="cloudmart-${{ inputs.environment }}-sam-artifacts-${ACCOUNT_ID}"
+          BUCKET_NAME="cloudmart-${CF_ENVIRONMENT}-sam-artifacts-${ACCOUNT_ID}"
 
           sam deploy \
             --template-file .aws-sam/build/template.yaml \
-            --stack-name cloudmart-application-${{ inputs.environment }} \
+            --stack-name "cloudmart-application-${CF_ENVIRONMENT}" \
             --s3-bucket "$BUCKET_NAME" \
-            --region "${{ env.AWS_REGION }}" \
+            --region "${AWS_REGION}" \
             --on-failure DO_NOTHING \
             --capabilities CAPABILITY_IAM \
             --parameter-overrides \
-              Environment=${{ inputs.environment }} \
+              Environment="$CF_ENVIRONMENT" \
               NotificationEmail="${{ secrets.NOTIFICATION_EMAIL }}" \
               SenderEmail="${{ secrets.SENDER_EMAIL }}" \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset
 
-      # ------------------------------------------------
-      # Wait for RDS
-      # ------------------------------------------------
-
       - name: Wait for RDS
+        env:
+          CF_ENVIRONMENT: ${{ needs.load-config.outputs.environment }}
         run: |
           aws rds wait db-instance-available \
-            --db-instance-identifier cloudmart-${{ inputs.environment }}-mysql
-
-      # ------------------------------------------------
-      # Initialize Database
-      # ------------------------------------------------
+            --db-instance-identifier "cloudmart-${CF_ENVIRONMENT}-mysql"
 
       - name: Initialize Database
+        env:
+          CF_ENVIRONMENT: ${{ needs.load-config.outputs.environment }}
         run: |
-
           aws lambda invoke \
-            --function-name cloudmart-${{ inputs.environment }}-db-init \
+            --function-name "cloudmart-${CF_ENVIRONMENT}-db-init" \
             --payload '{}' \
             --cli-binary-format raw-in-base64-out \
             db-init-response.json
@@ -283,16 +294,17 @@ jobs:
 
 
   # ==================================================
-  # EC2 INFRASTRUCTURE - MILESTONE 5
+  # EC2 INFRASTRUCTURE
   # ==================================================
 
   deploy-ec2-infrastructure:
     name: Deploy EC2 Dashboard Infrastructure
     runs-on: ubuntu-latest
-    needs: deploy-application
+    needs:
+      - load-config
+      - deploy-application
 
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -311,27 +323,30 @@ jobs:
             --template-body file://cloudformation/Milestone5_EC2_Stack.yaml
 
       - name: Deploy EC2 Dashboard Infrastructure
+        env:
+          CF_ENVIRONMENT: ${{ needs.load-config.outputs.environment }}
         run: |
           aws cloudformation deploy \
-            --stack-name cloudmart-milestone5-ec2-${{ inputs.environment }} \
+            --stack-name "cloudmart-milestone5-ec2-${CF_ENVIRONMENT}" \
             --template-file cloudformation/Milestone5_EC2_Stack.yaml \
             --parameter-overrides \
-              Environment=${{ inputs.environment }} \
+              Environment="$CF_ENVIRONMENT" \
             --capabilities CAPABILITY_NAMED_IAM \
             --no-fail-on-empty-changeset
 
 
   # ==================================================
-  # MONITORING STACK - MILESTONE 5
+  # MONITORING
   # ==================================================
 
   deploy-monitoring:
     name: Deploy Monitoring Stack
     runs-on: ubuntu-latest
-    needs: deploy-ec2-infrastructure
+    needs:
+      - load-config
+      - deploy-ec2-infrastructure
 
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -349,36 +364,31 @@ jobs:
           aws cloudformation validate-template \
             --template-body "file://cloudformation/Event _Monitoring _Stack.yaml"
 
-      - name: Verify Dashboard Name
-        run: |
-          echo "Commit:"
-          git rev-parse HEAD
-
-          echo "Dashboard name in template:"
-          grep "DashboardName:" "cloudformation/Event _Monitoring _Stack.yaml"
-
       - name: Deploy Monitoring Stack
+        env:
+          CF_ENVIRONMENT: ${{ needs.load-config.outputs.environment }}
         run: |
           aws cloudformation deploy \
-            --stack-name cloudmart-monitoring-${{ inputs.environment }} \
+            --stack-name "cloudmart-monitoring-${CF_ENVIRONMENT}" \
             --template-file "cloudformation/Event _Monitoring _Stack.yaml" \
             --parameter-overrides \
-              Environment=${{ inputs.environment }} \
+              Environment="$CF_ENVIRONMENT" \
               NotificationEmail="${{ secrets.NOTIFICATION_EMAIL }}" \
             --no-fail-on-empty-changeset
 
 
   # ==================================================
-  # EC2 DASHBOARD APPLICATION - MILESTONE 5
+  # EC2 DASHBOARD APPLICATION
   # ==================================================
 
   deploy-ec2-dashboard:
     name: Deploy EC2 Dashboard Application
     runs-on: ubuntu-latest
-    needs: deploy-monitoring
+    needs:
+      - load-config
+      - deploy-monitoring
 
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -391,34 +401,23 @@ jobs:
       - name: Verify AWS identity
         run: aws sts get-caller-identity
 
-      # ------------------------------------------------
-      # Get EC2 Instance ID from CloudFormation
-      # ------------------------------------------------
-
       - name: Get Dashboard EC2 Instance ID
         id: get-ec2-id
+        env:
+          CF_ENVIRONMENT: ${{ needs.load-config.outputs.environment }}
         run: |
-
           EC2_INSTANCE_ID=$(aws cloudformation describe-stacks \
-            --stack-name cloudmart-milestone5-ec2-${{ inputs.environment }} \
+            --stack-name "cloudmart-milestone5-ec2-${CF_ENVIRONMENT}" \
             --query "Stacks[0].Outputs[?OutputKey=='DashboardEC2InstanceId'].OutputValue" \
             --output text)
 
-          echo "EC2 Instance ID: $EC2_INSTANCE_ID"
-
           echo "EC2_INSTANCE_ID=$EC2_INSTANCE_ID" >> "$GITHUB_ENV"
-
-      # ------------------------------------------------
-      # Wait for EC2 SSM availability
-      # ------------------------------------------------
 
       - name: Wait for EC2 SSM
         run: |
-
           echo "Waiting for EC2 instance to become available through SSM..."
 
           for i in {1..30}; do
-
             STATUS=$(aws ssm describe-instance-information \
               --filters "Key=InstanceIds,Values=$EC2_INSTANCE_ID" \
               --query "InstanceInformationList[0].PingStatus" \
@@ -432,19 +431,13 @@ jobs:
             fi
 
             sleep 10
-
           done
 
           echo "EC2 did not become available through SSM."
           exit 1
 
-      # ------------------------------------------------
-      # Deploy Dashboard Application
-      # ------------------------------------------------
-
       - name: Deploy Dashboard to EC2
         run: |
-
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids "$EC2_INSTANCE_ID" \
             --document-name "AWS-RunShellScript" \
@@ -461,8 +454,6 @@ jobs:
             ]' \
             --query "Command.CommandId" \
             --output text)
-
-          echo "SSM Command ID: $COMMAND_ID"
 
           aws ssm wait command-executed \
             --command-id "$COMMAND_ID" \

@@ -9,7 +9,6 @@ Parameters:
 
   Environment:
     Type: String
-    Default: dev
     AllowedValues:
       - dev
       - test
@@ -18,12 +17,10 @@ Parameters:
 
   DBName:
     Type: String
-    Default: cloudmart
     Description: CloudMart database name
 
   DBUsername:
     Type: String
-    Default: admin
     Description: RDS master username
 
   DBPassword:
