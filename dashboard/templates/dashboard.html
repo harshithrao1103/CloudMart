@@ -347,6 +347,37 @@
             border-bottom: 1px solid #e2e8f0;
         }
 
+        /* ================= ORDER STATUS FILTERS ================= */
+
+        .order-filters {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            padding: 18px 25px 0;
+        }
+
+        .order-filter {
+            border: 1px solid #cbd5e1;
+            background: white;
+            color: #475569;
+            padding: 9px 18px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .order-filter:hover {
+            background: #f1f5f9;
+        }
+
+        .order-filter.active {
+            background: #2563eb;
+            color: white;
+            border-color: #2563eb;
+        }
+
+
         .search-input {
             width: 100%;
             max-width: 400px;
@@ -1145,8 +1176,67 @@
 
                         <div>
                             <h2>All Orders</h2>
-                            <p>Search orders using Customer ID</p>
+                            <p>Filter orders by status or search using Customer ID</p>
                         </div>
+
+                    </div>
+
+
+                    <div class="order-filters">
+
+                        <button
+                            type="button"
+                            class="order-filter active"
+                            data-status="all"
+                            onclick="filterOrdersByStatus('all', this)"
+                        >
+                            All
+                        </button>
+
+                        <button
+                            type="button"
+                            class="order-filter"
+                            data-status="confirmed"
+                            onclick="filterOrdersByStatus('confirmed', this)"
+                        >
+                            Confirmed
+                        </button>
+
+                        <button
+                            type="button"
+                            class="order-filter"
+                            data-status="processing"
+                            onclick="filterOrdersByStatus('processing', this)"
+                        >
+                            Processing
+                        </button>
+
+                        <button
+                            type="button"
+                            class="order-filter"
+                            data-status="shipped"
+                            onclick="filterOrdersByStatus('shipped', this)"
+                        >
+                            Shipped
+                        </button>
+
+                        <button
+                            type="button"
+                            class="order-filter"
+                            data-status="delivered"
+                            onclick="filterOrdersByStatus('delivered', this)"
+                        >
+                            Delivered
+                        </button>
+
+                        <button
+                            type="button"
+                            class="order-filter"
+                            data-status="cancelled"
+                            onclick="filterOrdersByStatus('cancelled', this)"
+                        >
+                            Cancelled
+                        </button>
 
                     </div>
 
@@ -1189,7 +1279,10 @@
 
                                 {% for order in orders %}
 
-                                <tr class="order-row">
+                                <tr
+                                    class="order-row"
+                                    data-status="{{ order.status|lower }}"
+                                >
 
                                     <td>
                                         {{ order.created_at }}
@@ -1810,9 +1903,10 @@
         }
 
 
-        /* ================= ORDERS PAGINATION + SEARCH ================= */
+        /* ================= ORDERS PAGINATION + STATUS FILTER + SEARCH ================= */
 
         let ordersPage = 0;
+        let selectedOrderStatus = "all";
 
         function getFilteredOrderRows() {
 
@@ -1833,7 +1927,19 @@
                     .trim()
                     .toLowerCase();
 
-                return search === "" || customerId.includes(search);
+                const status =
+                    (row.dataset.status || "")
+                    .trim()
+                    .toLowerCase();
+
+                const customerMatches =
+                    search === "" || customerId.includes(search);
+
+                const statusMatches =
+                    selectedOrderStatus === "all" ||
+                    status === selectedOrderStatus;
+
+                return customerMatches && statusMatches;
             });
         }
 
@@ -1864,6 +1970,22 @@
                     renderOrders();
                 }
             );
+        }
+
+        function filterOrdersByStatus(status, button) {
+
+            selectedOrderStatus = status;
+            ordersPage = 0;
+
+            document
+                .querySelectorAll(".order-filter")
+                .forEach(function(filterButton) {
+                    filterButton.classList.remove("active");
+                });
+
+            button.classList.add("active");
+
+            renderOrders();
         }
 
         function filterOrders() {
