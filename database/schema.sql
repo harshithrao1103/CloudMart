@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS products (
 );
 
 
-CREATE TABLE login_history (
+CREATE TABLE IF NOT EXISTS login_history (
     login_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT NOT NULL,
     login_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
