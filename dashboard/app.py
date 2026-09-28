@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, session, url_for, Response
 import requests
 import boto3
+import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -22,10 +23,13 @@ def format_ist_time(value):
 
 app = Flask(__name__)
 
-app.secret_key = "cloudmart-dashboard-secret"
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "cloudmart-dashboard-secret")
 
-API_URL = "https://0h8szqn3r5.execute-api.us-east-1.amazonaws.com/dev"
-REPORTS_BUCKET = "cloudmart-dev-reports-598886663370"
+API_URL = os.environ.get("API_URL")
+REPORTS_BUCKET = os.environ.get("REPORTS_BUCKET")
+
+if not API_URL or not REPORTS_BUCKET:
+    raise RuntimeError("API_URL and REPORTS_BUCKET environment variables are required")
 
 s3 = boto3.client("s3")
 

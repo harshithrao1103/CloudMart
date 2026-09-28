@@ -699,18 +699,12 @@ Resources:
                 Action:
                   - s3:GetObject
                   - s3:GetObjectVersion
-                Resource: !Sub
-                  - '${ReportsBucketArn}/*'
-                  - ReportsBucketArn:
-                      Fn::ImportValue:
-                        !Sub CloudMart-${Environment}-ReportsBucketArn
+                Resource: !Sub arn:${AWS::Partition}:s3:::cloudmart-${Environment}-reports-${AWS::AccountId}/*
 
               - Effect: Allow
                 Action:
                   - s3:ListBucket
-                Resource:
-                  Fn::ImportValue:
-                    !Sub CloudMart-${Environment}-ReportsBucketArn
+                Resource: !Sub arn:${AWS::Partition}:s3:::cloudmart-${Environment}-reports-${AWS::AccountId}
 
 
   DashboardEC2InstanceProfile:
@@ -844,11 +838,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - s3:PutObject
-                Resource: !Sub
-                  - '${ReportsBucketArn}/daily-report-*'
-                  - ReportsBucketArn:
-                      Fn::ImportValue:
-                        !Sub CloudMart-${Environment}-ReportsBucketArn
+                Resource: !Sub arn:${AWS::Partition}:s3:::cloudmart-${Environment}-reports-${AWS::AccountId}/daily-report-*
 
         - PolicyName: DailyReportLambdaVpcNetworking
           PolicyDocument:

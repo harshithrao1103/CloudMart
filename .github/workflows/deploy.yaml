@@ -436,6 +436,21 @@ jobs:
           echo "EC2 did not become available through SSM."
           exit 1
 
+      - name: Wait for EC2 Dashboard Bootstrap
+        run: |
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "$EC2_INSTANCE_ID" \
+            --document-name "AWS-RunShellScript" \
+            --parameters 'commands=[
+              "for i in {1..30}; do if [ -f /var/lib/cloudmart-dashboard-setup-complete ]; then exit 0; fi; sleep 10; done; exit 1"
+            ]' \
+            --query "Command.CommandId" \
+            --output text)
+
+          aws ssm wait command-executed \
+            --command-id "$COMMAND_ID" \
+            --instance-id "$EC2_INSTANCE_ID"
+
       - name: Deploy Dashboard to EC2
         run: |
           COMMAND_ID=$(aws ssm send-command \
