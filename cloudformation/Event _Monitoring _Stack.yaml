@@ -145,6 +145,46 @@ Resources:
         - !Ref MonitoringTopic
 
 
+  OrderLambdaThrottlesAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub cloudmart-${Environment}-order-lambda-throttles
+      AlarmDescription: Alarm when the Order Lambda is throttled
+      Namespace: AWS/Lambda
+      MetricName: Throttles
+      Dimensions:
+        - Name: FunctionName
+          Value: !Sub cloudmart-${Environment}-order
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref MonitoringTopic
+
+
+  ProductLambdaThrottlesAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub cloudmart-${Environment}-product-lambda-throttles
+      AlarmDescription: Alarm when the Product Lambda is throttled
+      Namespace: AWS/Lambda
+      MetricName: Throttles
+      Dimensions:
+        - Name: FunctionName
+          Value: !Sub cloudmart-${Environment}-product
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref MonitoringTopic
+
+
   RDSCPUAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
@@ -155,6 +195,28 @@ Resources:
       Dimensions:
         - Name: DBInstanceIdentifier
           Value: !Sub cloudmart-${Environment}-mysql
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 80
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !Ref MonitoringTopic
+
+
+  EC2CPUAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub cloudmart-${Environment}-ec2-cpu
+      AlarmDescription: Alarm when Dashboard EC2 CPU utilization is high
+      Namespace: AWS/EC2
+      MetricName: CPUUtilization
+      Dimensions:
+        - Name: InstanceId
+          Value:
+            Fn::ImportValue:
+              !Sub CloudMart-${Environment}-DashboardEC2InstanceId
       Statistic: Average
       Period: 300
       EvaluationPeriods: 1
@@ -396,6 +458,42 @@ Resources:
                   "width": 12,
                   "height": 6,
                   "properties": {
+                    "title": "Lambda Throttles",
+                    "view": "timeSeries",
+                    "region": "${AWS::Region}",
+                    "stat": "Sum",
+                    "period": 300,
+                    "metrics": [
+                      [
+                        "AWS/Lambda",
+                        "Throttles",
+                        "FunctionName",
+                        "cloudmart-${Environment}-order",
+                        {
+                          "label": "Order Lambda Throttles",
+                          "color": "#2ca02c"
+                        }
+                      ],
+                      [
+                        "AWS/Lambda",
+                        "Throttles",
+                        "FunctionName",
+                        "cloudmart-${Environment}-product",
+                        {
+                          "label": "Product Lambda Throttles",
+                          "color": "#d62728"
+                        }
+                      ]
+                    ]
+                  }
+                },
+                {
+                  "type": "metric",
+                  "x": 12,
+                  "y": 12,
+                  "width": 12,
+                  "height": 6,
+                  "properties": {
                     "title": "RDS CPU Utilization",
                     "view": "timeSeries",
                     "region": "${AWS::Region}",
@@ -413,8 +511,30 @@ Resources:
                 },
                 {
                   "type": "metric",
+                  "x": 0,
+                  "y": 18,
+                  "width": 12,
+                  "height": 6,
+                  "properties": {
+                    "title": "EC2 CPU Utilization",
+                    "view": "timeSeries",
+                    "region": "${AWS::Region}",
+                    "metrics": [
+                      [
+                        "AWS/EC2",
+                        "CPUUtilization",
+                        "InstanceId",
+                        "${DashboardEC2InstanceId}"
+                      ]
+                    ],
+                    "stat": "Average",
+                    "period": 300
+                  }
+                },
+                {
+                  "type": "metric",
                   "x": 12,
-                  "y": 12,
+                  "y": 18,
                   "width": 12,
                   "height": 6,
                   "properties": {
@@ -436,7 +556,7 @@ Resources:
                 {
                   "type": "metric",
                   "x": 0,
-                  "y": 18,
+                  "y": 24,
                   "width": 12,
                   "height": 6,
                   "properties": {
