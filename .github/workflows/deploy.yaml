@@ -214,7 +214,16 @@ jobs:
         run: aws sts get-caller-identity
 
       - name: Setup SAM CLI
-        uses: aws-actions/setup-sam@v2
+        uses: aws-actions/setup-sam@v3
+        with:
+          use-installer: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify SAM CLI
+        run: |
+          sam --version
+          sam --info
+
 
       - name: Validate SAM Application Stack
         run: |
