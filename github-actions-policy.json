@@ -144,7 +144,8 @@
                 "iam:DetachRolePolicy",
                 "iam:GetInstanceProfile",
                 "iam:RemoveRoleFromInstanceProfile",
-                "iam:CreateInstanceProfile"
+                "iam:CreateInstanceProfile",
+                "iam:AddRoleToInstanceProfile"
             ],
             "Resource": "*"
         },
