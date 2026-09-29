@@ -986,7 +986,8 @@ def create_order(event):
             "OrderConfirmed",
             {
                 "order_id": order_id,
-                "customer_id": customer_id
+                "customer_id": customer_id,
+                "customer_email": customer_email
             }
         )
 
