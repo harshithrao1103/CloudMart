@@ -455,6 +455,11 @@ Resources:
           ToPort: 3306
           SourceSecurityGroupId: !Ref LambdaSecurityGroup
 
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          SourceSecurityGroupId: !Ref EC2SecurityGroup
+
       Tags:
 
         - Key: Name
