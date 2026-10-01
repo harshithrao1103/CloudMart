@@ -31,6 +31,10 @@ CREATE TABLE IF NOT EXISTS products (
 );
 
 
+-- ============================================================
+-- 3. LOGIN HISTORY
+-- ============================================================
+
 CREATE TABLE IF NOT EXISTS login_history (
     login_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT NOT NULL,
@@ -44,8 +48,9 @@ CREATE TABLE IF NOT EXISTS login_history (
         REFERENCES users(user_id)
 );
 
+
 -- ============================================================
--- 3. INVENTORY
+-- 4. INVENTORY
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS inventory (
@@ -64,7 +69,7 @@ CREATE TABLE IF NOT EXISTS inventory (
 
 
 -- ============================================================
--- 4. ORDERS
+-- 5. ORDERS
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS orders (
@@ -85,7 +90,7 @@ CREATE TABLE IF NOT EXISTS orders (
 
 
 -- ============================================================
--- 5. ORDER ITEMS
+-- 6. ORDER ITEMS
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS order_items (
@@ -109,7 +114,7 @@ CREATE TABLE IF NOT EXISTS order_items (
 
 
 -- ============================================================
--- 6. ORDER HISTORY
+-- 7. ORDER HISTORY
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS order_history (
@@ -125,6 +130,55 @@ CREATE TABLE IF NOT EXISTS order_history (
         REFERENCES orders(order_id),
 
     INDEX idx_order_history_order_id (order_id)
+);
+
+
+-- ============================================================
+-- SAMPLE USERS
+-- ============================================================
+
+INSERT INTO users
+    (name, email, password_hash, role, is_active)
+SELECT
+    'CloudMart Admin',
+    'harshith.rao1103@gmail.com',
+    NULL,
+    'admin',
+    TRUE
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM users
+    WHERE email = 'harshith.rao1103@gmail.com'
+);
+
+
+INSERT INTO users
+    (name, email, password_hash, role, is_active)
+SELECT
+    'Shoshek',
+    'harshithrao10.1103@gmail.com',
+    NULL,
+    'customer',
+    TRUE
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM users
+    WHERE email = 'harshithrao10.1103@gmail.com'
+);
+
+
+INSERT INTO users
+    (name, email, password_hash, role, is_active)
+SELECT
+    'Sidhesh',
+    'harshithrao1.1103@gmail.com',
+    NULL,
+    'customer',
+    TRUE
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM users
+    WHERE email = 'harshithrao1.1103@gmail.com'
 );
 
 
@@ -221,3 +275,190 @@ WHERE p.name = 'Keyboard'
       FROM inventory i
       WHERE i.product_id = p.product_id
   );
+
+
+-- ============================================================
+-- SAMPLE ORDERS
+-- ============================================================
+
+INSERT INTO orders
+    (customer_id, status, total_amount)
+SELECT
+    u.user_id,
+    'delivered',
+    67400.00
+FROM users u
+WHERE u.email = 'harshithrao10.1103@gmail.com'
+  AND NOT EXISTS (
+      SELECT 1
+      FROM orders o
+      WHERE o.customer_id = u.user_id
+        AND o.total_amount = 67400.00
+        AND o.status = 'delivered'
+  );
+
+
+INSERT INTO orders
+    (customer_id, status, total_amount)
+SELECT
+    u.user_id,
+    'confirmed',
+    3700.00
+FROM users u
+WHERE u.email = 'harshithrao1.1103@gmail.com'
+  AND NOT EXISTS (
+      SELECT 1
+      FROM orders o
+      WHERE o.customer_id = u.user_id
+        AND o.total_amount = 3700.00
+        AND o.status = 'confirmed'
+  );
+
+
+-- ============================================================
+-- SAMPLE ORDER ITEMS
+-- ============================================================
+
+INSERT INTO order_items
+    (order_id, product_id, quantity, unit_price)
+SELECT
+    o.order_id,
+    p.product_id,
+    1,
+    65000.00
+FROM orders o
+JOIN users u
+    ON o.customer_id = u.user_id
+JOIN products p
+    ON p.name = 'Laptop'
+WHERE u.email = 'harshithrao10.1103@gmail.com'
+  AND o.total_amount = 67400.00
+  AND o.status = 'delivered'
+  AND NOT EXISTS (
+      SELECT 1
+      FROM order_items oi
+      WHERE oi.order_id = o.order_id
+        AND oi.product_id = p.product_id
+  );
+
+
+INSERT INTO order_items
+    (order_id, product_id, quantity, unit_price)
+SELECT
+    o.order_id,
+    p.product_id,
+    2,
+    1200.00
+FROM orders o
+JOIN users u
+    ON o.customer_id = u.user_id
+JOIN products p
+    ON p.name = 'Wireless Mouse'
+WHERE u.email = 'harshithrao10.1103@gmail.com'
+  AND o.total_amount = 67400.00
+  AND o.status = 'delivered'
+  AND NOT EXISTS (
+      SELECT 1
+      FROM order_items oi
+      WHERE oi.order_id = o.order_id
+        AND oi.product_id = p.product_id
+  );
+
+
+INSERT INTO order_items
+    (order_id, product_id, quantity, unit_price)
+SELECT
+    o.order_id,
+    p.product_id,
+    1,
+    2500.00
+FROM orders o
+JOIN users u
+    ON o.customer_id = u.user_id
+JOIN products p
+    ON p.name = 'Keyboard'
+WHERE u.email = 'harshithrao1.1103@gmail.com'
+  AND o.total_amount = 3700.00
+  AND o.status = 'confirmed'
+  AND NOT EXISTS (
+      SELECT 1
+      FROM order_items oi
+      WHERE oi.order_id = o.order_id
+        AND oi.product_id = p.product_id
+  );
+
+
+INSERT INTO order_items
+    (order_id, product_id, quantity, unit_price)
+SELECT
+    o.order_id,
+    p.product_id,
+    1,
+    1200.00
+FROM orders o
+JOIN users u
+    ON o.customer_id = u.user_id
+JOIN products p
+    ON p.name = 'Wireless Mouse'
+WHERE u.email = 'harshithrao1.1103@gmail.com'
+  AND o.total_amount = 3700.00
+  AND o.status = 'confirmed'
+  AND NOT EXISTS (
+      SELECT 1
+      FROM order_items oi
+      WHERE oi.order_id = o.order_id
+        AND oi.product_id = p.product_id
+  );
+
+
+-- ============================================================
+-- SAMPLE ORDER HISTORY
+-- ============================================================
+
+INSERT INTO order_history
+    (order_id, old_status, new_status, changed_by)
+SELECT
+    o.order_id,
+    NULL,
+    'delivered',
+    'system'
+FROM orders o
+JOIN users u
+    ON o.customer_id = u.user_id
+WHERE u.email = 'harshithrao10.1103@gmail.com'
+  AND o.total_amount = 67400.00
+  AND o.status = 'delivered'
+  AND NOT EXISTS (
+      SELECT 1
+      FROM order_history oh
+      WHERE oh.order_id = o.order_id
+        AND oh.new_status = 'delivered'
+  );
+
+
+INSERT INTO order_history
+    (order_id, old_status, new_status, changed_by)
+SELECT
+    o.order_id,
+    NULL,
+    'confirmed',
+    'system'
+FROM orders o
+JOIN users u
+    ON o.customer_id = u.user_id
+WHERE u.email = 'harshithrao1.1103@gmail.com'
+  AND o.total_amount = 3700.00
+  AND o.status = 'confirmed'
+  AND NOT EXISTS (
+      SELECT 1
+      FROM order_history oh
+      WHERE oh.order_id = o.order_id
+        AND oh.new_status = 'confirmed'
+  );
+
+
+-- ============================================================
+-- LOGIN HISTORY
+-- ============================================================
+-- Intentionally left empty.
+-- No sample login records are inserted.

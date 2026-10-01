@@ -59,7 +59,7 @@ Resources:
               cat > /etc/cloudmart-dashboard.env <<'ENVEOF'
               API_URL=${ApiUrl}
               REPORTS_BUCKET=cloudmart-${Environment}-reports-${AWS::AccountId}
-              FLASK_SECRET_KEY=cloudmart-dashboard-secret
+              FLASK_SECRET_KEY=cloudmart-${Environment}-dashboard-secret
               ENVEOF
 
               chmod 600 /etc/cloudmart-dashboard.env
