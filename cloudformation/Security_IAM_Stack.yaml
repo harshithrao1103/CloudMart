@@ -55,7 +55,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - logs:CreateLogGroup
-                Resource: '*'
+                Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cloudmart-${Environment}-authorizer
 
               # CloudWatch Logs - Create Stream and Write Logs
               - Effect: Allow
