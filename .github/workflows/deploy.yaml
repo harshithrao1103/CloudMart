@@ -363,7 +363,7 @@ jobs:
       - name: Validate Monitoring Stack
         run: |
           aws cloudformation validate-template \
-            --template-body "file://cloudformation/Event_Monitoring_Stack.yaml"
+            --template-body "file://cloudformation/Event _Monitoring_Stack.yaml"
 
       - name: Deploy Monitoring Stack
         env:
@@ -371,7 +371,7 @@ jobs:
         run: |
           aws cloudformation deploy \
             --stack-name "cloudmart-monitoring-${CF_ENVIRONMENT}" \
-            --template-file "cloudformation/Event_Monitoring_Stack.yaml" \
+            --template-file "cloudformation/Event _Monitoring_Stack.yaml" \
             --parameter-overrides \
               Environment="$CF_ENVIRONMENT" \
               NotificationEmail="${{ secrets.NOTIFICATION_EMAIL }}" \
