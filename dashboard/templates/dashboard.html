@@ -193,8 +193,6 @@
             box-shadow: 0 3px 10px rgba(0, 0, 0, 0.04);
         }
 
-        .stat-clickable { width:100%; text-align:left; cursor:pointer; color:inherit; font:inherit; }
-        .stat-clickable:hover { border-color:#93b4ff; box-shadow:0 6px 18px rgba(37,99,235,.10); }
         .stat-title {
             color: #64748b;
             font-size: 13px;
@@ -689,61 +687,7 @@
                 gap: 20px;
             }
         }
-    
-
-        /* Refined, simple dashboard styling inspired by the reference UI */
-        :root {
-            --cm-navy: #101d3a;
-            --cm-blue: #2563eb;
-            --cm-bg: #f4f7fc;
-            --cm-line: #e5eaf3;
-            --cm-muted: #718096;
-        }
-        body {
-            background: var(--cm-bg);
-            color: #17233c;
-            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
-        }
-        .navbar {
-            background: var(--cm-navy);
-            box-shadow: 0 2px 14px rgba(16, 29, 58, .10);
-        }
-        .brand-icon { background: var(--cm-blue); border-radius: 11px; }
-        .logout { border: 1px solid rgba(255,255,255,.15); border-radius: 9px; }
-        .sidebar {
-            background: linear-gradient(180deg, #101d3a 0%, #0e1931 100%);
-            border-right: 0;
-            box-shadow: 8px 0 24px rgba(16,29,58,.06);
-        }
-        .sidebar-title { color: #aebedb; letter-spacing: .08em; }
-        .nav-button { color: #d9e4fa; border: 1px solid transparent; border-radius: 11px; transition: background .18s ease, color .18s ease; }
-        .nav-button:hover { background: rgba(255,255,255,.08); color: #fff; }
-        .nav-button.active { background: linear-gradient(135deg,#2563eb,#477bff); color: #fff; box-shadow: 0 6px 16px rgba(37,99,235,.22); }
-        .page-header h1 { color: #17233c; letter-spacing: -.6px; }
-        .page-header p, .stat-title { color: var(--cm-muted); }
-        .stat-card, .section {
-            border: 1px solid var(--cm-line);
-            border-radius: 16px;
-            box-shadow: 0 8px 24px rgba(23,35,60,.045);
-        }
-        .stat-card { padding: 22px; }
-        .stat-icon { border-radius: 12px; }
-        .section-header { background: #fff; border-bottom-color: #edf1f7; }
-        .section-header h2 { color: #17233c; }
-        input, select { border-color: #d7e0ee; border-radius: 10px; }
-        input:focus, select:focus { border-color: #7aa2ff; box-shadow: 0 0 0 3px rgba(37,99,235,.09); outline: none; }
-        table { border-collapse: separate; border-spacing: 0; }
-        thead th { background: #f6f8fc; color: #60708b; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; }
-        tbody tr:hover { background: #f7faff; }
-        button, .button, .btn { transition: transform .18s ease, box-shadow .18s ease, background .18s ease; }
-        button:hover, .button:hover, .btn:hover { transform: translateY(-1px); }
-        @media (max-width: 700px) {
-            .navbar { padding: 0 16px; }
-            .admin-area { gap: 10px; }
-            .container { padding: 22px 16px; }
-            .stats { grid-template-columns: 1fr; }
-        }
-</style>
+    </style>
 </head>
 
 <body>
@@ -822,52 +766,56 @@
                 </div>
 
 
-                <!-- Dashboard statistics -->
+                <!-- Statistics -->
+
                 <div class="stats">
+
                     <div class="stat-card">
-                        <div class="stat-icon">💰</div>
-                        <div class="stat-title">Total Sales (excluding cancelled)</div>
-                        <div class="stat-value" id="totalSales">₹0.00</div>
+
+                        <div class="stat-icon">📦</div>
+
+                        <div class="stat-title">
+                            Total Products
+                        </div>
+
+                        <div class="stat-value">
+                            {{ products|length }}
+                        </div>
+
                     </div>
+
+
                     <div class="stat-card">
-                        <div class="stat-icon">📈</div>
-                        <div class="stat-title">Today's Sales</div>
-                        <div class="stat-value" id="todaySales">₹0.00</div>
+
+                        <div class="stat-icon">🛒</div>
+
+                        <div class="stat-title">
+                            Recent Orders
+                        </div>
+
+                        <div class="stat-value">
+                            {{ orders|length }}
+                        </div>
+
                     </div>
-                    <button class="stat-card stat-clickable" type="button" onclick="openOrdersForStatus('confirmed')">
-                        <div class="stat-icon">✅</div><div class="stat-title">Confirmed Orders</div>
-                        <div class="stat-value" id="confirmedCount">0</div>
-                    </button>
-                    <button class="stat-card stat-clickable" type="button" onclick="openOrdersForStatus('processing')">
-                        <div class="stat-icon">⚙️</div><div class="stat-title">Processing Orders</div>
-                        <div class="stat-value" id="processingCount">0</div>
-                    </button>
-                    <button class="stat-card stat-clickable" type="button" onclick="openOrdersForStatus('shipped')">
-                        <div class="stat-icon">🚚</div><div class="stat-title">Shipped Orders</div>
-                        <div class="stat-value" id="shippedCount">0</div>
-                    </button>
-                    <button class="stat-card stat-clickable" type="button" onclick="openOrdersForStatus('delivered')">
-                        <div class="stat-icon">📦</div><div class="stat-title">Delivered Orders</div>
-                        <div class="stat-value" id="deliveredCount">0</div>
-                    </button>
-                    <button class="stat-card stat-clickable" type="button" onclick="openOrdersForStatus('cancelled')">
-                        <div class="stat-icon">❌</div><div class="stat-title">Cancelled Orders</div>
-                        <div class="stat-value" id="cancelledCount">0</div>
-                    </button>
-                    <button class="stat-card stat-clickable" type="button" onclick="showProductsPage()">
-                        <div class="stat-icon">⚠️</div><div class="stat-title">Low-Stock Products (≤ 5)</div>
-                        <div class="stat-value" id="lowStockCount">0</div>
-                    </button>
+
+
+                    <div class="stat-card">
+
+                        <div class="stat-icon">📊</div>
+
+                        <div class="stat-title">
+                            Daily Report
+                        </div>
+
+                        <div class="stat-value">
+                            Ready
+                        </div>
+
+                    </div>
+
                 </div>
 
-                <section class="section">
-                    <div class="section-header">
-                        <div><h2>Sales Revenue</h2><p>Daily revenue from non-cancelled orders</p></div>
-                    </div>
-                    <div style="padding:20px; height:300px;">
-                        <canvas id="salesRevenueChart" aria-label="Sales revenue graph"></canvas>
-                    </div>
-                </section>
 
                 <!-- Top 5 Most Ordered Products -->
 
@@ -1009,13 +957,6 @@
                         </div>
 
                         <div class="report-divider"></div>
-
-                        <div class="report-date-picker" style="margin-top:22px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-                            <label for="reportDate"><strong>Download report for a date:</strong></label>
-                            <input type="date" id="reportDate" max="{{ today_iso }}">
-                            <button type="button" class="download-button" style="border:0;cursor:pointer;" onclick="downloadSelectedReport()">Check & Download</button>
-                            <span id="reportDateMessage" style="color:#64748b;font-size:13px;"></span>
-                        </div>
 
                         <!-- Previous Reports -->
                         <div class="previous-reports">
@@ -1473,9 +1414,6 @@
     </main>
 
 
-    <!-- Chart.js for the revenue graph -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
     <!-- ================= JAVASCRIPT ================= -->
 
     <script>
@@ -1562,97 +1500,10 @@
             {
                 productId: "{{ order.product_id }}",
                 productName: "{{ order.product_name|replace('"', '\\"') }}",
-                quantity: Number("{{ order.quantity }}"),
-                totalBill: Number("{{ order.total_bill or 0 }}"),
-                status: "{{ order.status|lower }}",
-                createdAt: "{{ order.created_at }}"
+                quantity: Number("{{ order.quantity }}")
             },
             {% endfor %}
         ];
-
-        function parseOrderDate(value) {
-            if (!value) return null;
-            const d = new Date(value.replace(" ", "T"));
-            return Number.isNaN(d.getTime()) ? null : d;
-        }
-
-        function updateDashboardStatsAndChart() {
-            const activeOrders = orders.filter(o => o.status !== "cancelled");
-            const totalSales = activeOrders.reduce((sum, o) => sum + (Number(o.totalBill) || 0), 0);
-            const today = new Date().toLocaleDateString("en-CA", {timeZone:"Asia/Kolkata"});
-            const todaySales = activeOrders.reduce((sum, o) => {
-                const d = parseOrderDate(o.createdAt);
-                if (!d) return sum;
-                const orderDay = new Intl.DateTimeFormat("en-CA", {
-                    timeZone:"Asia/Kolkata", year:"numeric", month:"2-digit", day:"2-digit"
-                }).format(d);
-                return sum + (orderDay === today ? (Number(o.totalBill) || 0) : 0);
-            }, 0);
-
-            document.getElementById("totalSales").textContent = "₹" + totalSales.toFixed(2);
-            document.getElementById("todaySales").textContent = "₹" + todaySales.toFixed(2);
-            ["confirmed","processing","shipped","delivered","cancelled"].forEach(status => {
-                const node = document.getElementById(status + "Count");
-                if (node) node.textContent = orders.filter(o => o.status === status).length;
-            });
-            document.getElementById("lowStockCount").textContent =
-                allProducts.filter(p => p.inventory <= 5).length;
-
-            const byDay = {};
-            activeOrders.forEach(o => {
-                const d = parseOrderDate(o.createdAt);
-                if (!d) return;
-                const day = new Intl.DateTimeFormat("en-CA", {
-                    timeZone:"Asia/Kolkata", year:"numeric", month:"2-digit", day:"2-digit"
-                }).format(d);
-                byDay[day] = (byDay[day] || 0) + (Number(o.totalBill) || 0);
-            });
-            const labels = Object.keys(byDay).sort().slice(-14);
-            const values = labels.map(day => byDay[day]);
-            const canvas = document.getElementById("salesRevenueChart");
-            if (canvas && window.Chart) {
-                if (window.salesRevenueChartInstance) window.salesRevenueChartInstance.destroy();
-                window.salesRevenueChartInstance = new Chart(canvas, {
-                    type:"line",
-                    data:{labels, datasets:[{label:"Revenue (₹)",data:values,borderColor:"#2563eb",
-                        backgroundColor:"rgba(37,99,235,.12)",fill:true,tension:.3}]},
-                    options:{responsive:true,maintainAspectRatio:false,
-                        scales:{y:{beginAtZero:true,title:{display:true,text:"Revenue (₹)"}},
-                        x:{title:{display:true,text:"Date"}}}}
-                });
-            }
-        }
-
-        function openOrdersForStatus(status) {
-            const nav = document.querySelector('.nav-button[onclick*="showPage(\'orders'"]');
-            showPage("orders", nav || document.querySelectorAll(".nav-button")[2]);
-            const filter = document.querySelector('.order-filter[data-status="' + status + '"]');
-            if (filter) filterOrdersByStatus(status, filter);
-        }
-
-        function showProductsPage() {
-            const nav = document.querySelectorAll(".nav-button")[1];
-            showPage("products", nav);
-            document.getElementById("productSearch").value = "";
-            filterProducts();
-        }
-
-        function downloadSelectedReport() {
-            const input = document.getElementById("reportDate");
-            const message = document.getElementById("reportDateMessage");
-            if (!input.value) {
-                message.textContent = "Please select a date.";
-                return;
-            }
-            const parts = input.value.split("-");
-            const routeDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
-            const available = reports.some(r => r.date === routeDate);
-            if (!available) {
-                message.textContent = "No report is available for that date.";
-                return;
-            }
-            window.location.href = `/report/download/${routeDate}`;
-        }
 
         const productTotals = {};
 
@@ -1725,8 +1576,6 @@
             },
             {% endfor %}
         ];
-
-        updateDashboardStatsAndChart();
 
         const lowStockProducts =
             allProducts.filter(function(product) {
