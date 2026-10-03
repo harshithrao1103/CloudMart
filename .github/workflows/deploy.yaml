@@ -224,7 +224,6 @@ jobs:
           sam --version
           sam --info
 
-
       - name: Validate SAM Application Stack
         run: |
           sam validate \
@@ -239,39 +238,32 @@ jobs:
           sam build \
             --template-file cloudformation/Application_Stack.yaml
 
-      - name: Ensure SAM Artifact Bucket Exists
+      - name: Get SAM Artifact Bucket from CloudFormation
+        id: sam-bucket
         env:
           CF_ENVIRONMENT: ${{ needs.load-config.outputs.environment }}
         run: |
-          ACCOUNT_ID=$(aws sts get-caller-identity \
-            --query Account \
+          BUCKET_NAME=$(aws cloudformation describe-stacks \
+            --stack-name "cloudmart-data-${CF_ENVIRONMENT}" \
+            --query "Stacks[0].Outputs[?OutputKey=='SAMArtifactBucketName'].OutputValue" \
             --output text)
 
-          BUCKET_NAME="cloudmart-${CF_ENVIRONMENT}-sam-artifacts-${ACCOUNT_ID}"
-
-          if aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
-            echo "SAM artifact bucket already exists."
-          else
-            echo "Creating SAM artifact bucket..."
-            aws s3api create-bucket \
-              --bucket "$BUCKET_NAME" \
-              --region "${AWS_REGION}"
+          if [ -z "$BUCKET_NAME" ] || [ "$BUCKET_NAME" = "None" ]; then
+            echo "SAM artifact bucket was not found in the data stack."
+            exit 1
           fi
+
+          echo "SAM artifact bucket: $BUCKET_NAME"
+          echo "bucket_name=$BUCKET_NAME" >> "$GITHUB_OUTPUT"
 
       - name: Deploy SAM Application
         env:
           CF_ENVIRONMENT: ${{ needs.load-config.outputs.environment }}
         run: |
-          ACCOUNT_ID=$(aws sts get-caller-identity \
-            --query Account \
-            --output text)
-
-          BUCKET_NAME="cloudmart-${CF_ENVIRONMENT}-sam-artifacts-${ACCOUNT_ID}"
-
           sam deploy \
             --template-file .aws-sam/build/template.yaml \
             --stack-name "cloudmart-application-${CF_ENVIRONMENT}" \
-            --s3-bucket "$BUCKET_NAME" \
+            --s3-bucket "${{ steps.sam-bucket.outputs.bucket_name }}" \
             --region "${AWS_REGION}" \
             --on-failure DO_NOTHING \
             --capabilities CAPABILITY_IAM \
@@ -371,7 +363,7 @@ jobs:
       - name: Validate Monitoring Stack
         run: |
           aws cloudformation validate-template \
-            --template-body "file://cloudformation/Event _Monitoring _Stack.yaml"
+            --template-body "file://cloudformation/Event_Monitoring_Stack.yaml"
 
       - name: Deploy Monitoring Stack
         env:
@@ -379,7 +371,7 @@ jobs:
         run: |
           aws cloudformation deploy \
             --stack-name "cloudmart-monitoring-${CF_ENVIRONMENT}" \
-            --template-file "cloudformation/Event _Monitoring _Stack.yaml" \
+            --template-file "cloudformation/Event_Monitoring_Stack.yaml" \
             --parameter-overrides \
               Environment="$CF_ENVIRONMENT" \
               NotificationEmail="${{ secrets.NOTIFICATION_EMAIL }}" \

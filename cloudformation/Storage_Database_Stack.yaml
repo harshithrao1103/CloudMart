@@ -2,8 +2,7 @@ AWSTemplateFormatVersion: '2010-09-09'
 
 Description: >
   CloudMart Milestone 2 Data Stack - RDS MySQL,
-  DB subnet group, S3 bucket, and SSM integration.
-
+  DB subnet group, S3 buckets, and SSM integration.
 
 Parameters:
 
@@ -41,7 +40,6 @@ Parameters:
     MinLength: 16
     Description: CloudMart JWT secret
 
-
 Resources:
 
   # ==================================================
@@ -59,7 +57,6 @@ Resources:
         Project: CloudMart
         Environment: !Ref Environment
 
-
   AuthTokenParameter:
     Type: AWS::SSM::Parameter
     Properties:
@@ -70,7 +67,6 @@ Resources:
       Tags:
         Project: CloudMart
         Environment: !Ref Environment
-
 
   JWTSecretParameter:
     Type: AWS::SSM::Parameter
@@ -83,7 +79,6 @@ Resources:
         Project: CloudMart
         Environment: !Ref Environment
 
-
   # ==================================================
   # RDS DB SUBNET GROUP
   # ==================================================
@@ -92,21 +87,16 @@ Resources:
     Type: AWS::RDS::DBSubnetGroup
     Properties:
       DBSubnetGroupDescription: CloudMart RDS DB subnet group
-
       SubnetIds:
         - Fn::ImportValue:
             !Sub CloudMart-${Environment}-PrivateSubnet1Id
-
         - Fn::ImportValue:
             !Sub CloudMart-${Environment}-PrivateSubnet2Id
-
       Tags:
         - Key: Name
           Value: !Sub cloudmart-${Environment}-db-subnet-group
-
         - Key: Environment
           Value: !Ref Environment
-
 
   # ==================================================
   # RDS MYSQL INSTANCE
@@ -115,47 +105,27 @@ Resources:
   CloudMartRDS:
     Type: AWS::RDS::DBInstance
     Properties:
-
-      DBInstanceIdentifier:
-        !Sub cloudmart-${Environment}-mysql
-
+      DBInstanceIdentifier: !Sub cloudmart-${Environment}-mysql
       Engine: mysql
-
       DBName: !Ref DBName
-
       MasterUsername: !Ref DBUsername
-
-      # Password is stored in SSM Parameter Store
-      # as a SecureString and retrieved securely.
       MasterUserPassword: !Ref DBPassword
-
       DBInstanceClass: db.t3.micro
-
       AllocatedStorage: 20
-
       StorageType: gp3
-
       PubliclyAccessible: false
-
       MultiAZ: false
-
       DBSubnetGroupName: !Ref CloudMartDBSubnetGroup
-
       VPCSecurityGroups:
         - Fn::ImportValue:
             !Sub CloudMart-${Environment}-RDSSecurityGroupId
-
       BackupRetentionPeriod: 1
-
       DeletionProtection: false
-
       Tags:
         - Key: Name
           Value: !Sub cloudmart-${Environment}-mysql
-
         - Key: Environment
           Value: !Ref Environment
-
 
   # ==================================================
   # S3 REPORTS BUCKET
@@ -164,29 +134,44 @@ Resources:
   CloudMartReportsBucket:
     Type: AWS::S3::Bucket
     Properties:
-
-      BucketName:
-        !Sub cloudmart-${Environment}-reports-${AWS::AccountId}
-
+      BucketName: !Sub cloudmart-${Environment}-reports-${AWS::AccountId}
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
-
       BucketEncryption:
         ServerSideEncryptionConfiguration:
-
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
-
       Tags:
         - Key: Name
           Value: !Sub cloudmart-${Environment}-reports
-
         - Key: Environment
           Value: !Ref Environment
 
+  # ==================================================
+  # S3 SAM ARTIFACTS BUCKET
+  # ==================================================
+
+  CloudMartSAMArtifactsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub cloudmart-${Environment}-sam-artifacts-${AWS::AccountId}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      Tags:
+        - Key: Name
+          Value: !Sub cloudmart-${Environment}-sam-artifacts
+        - Key: Environment
+          Value: !Ref Environment
 
 # ====================================================
 # OUTPUTS
@@ -204,7 +189,6 @@ Outputs:
     Export:
       Name: !Sub CloudMart-${Environment}-RDSInstanceIdentifier
 
-
   # --------------------------------------------------
   # RDS ENDPOINT
   # --------------------------------------------------
@@ -214,7 +198,6 @@ Outputs:
     Value: !GetAtt CloudMartRDS.Endpoint.Address
     Export:
       Name: !Sub CloudMart-${Environment}-RDSEndpoint
-
 
   # --------------------------------------------------
   # RDS PORT
@@ -226,7 +209,6 @@ Outputs:
     Export:
       Name: !Sub CloudMart-${Environment}-RDSPort
 
-
   # --------------------------------------------------
   # DB SUBNET GROUP
   # --------------------------------------------------
@@ -237,9 +219,8 @@ Outputs:
     Export:
       Name: !Sub CloudMart-${Environment}-DBSubnetGroupName
 
-
   # --------------------------------------------------
-  # S3 BUCKET
+  # S3 REPORTS BUCKET
   # --------------------------------------------------
 
   ReportsBucketName:
@@ -248,9 +229,16 @@ Outputs:
     Export:
       Name: !Sub CloudMart-${Environment}-ReportsBucketName
 
-
   ReportsBucketArn:
     Description: CloudMart S3 reports bucket ARN
     Value: !GetAtt CloudMartReportsBucket.Arn
     Export:
       Name: !Sub CloudMart-${Environment}-ReportsBucketArn
+
+  # --------------------------------------------------
+  # S3 SAM ARTIFACTS BUCKET
+  # --------------------------------------------------
+
+  SAMArtifactBucketName:
+    Description: CloudMart SAM deployment artifacts bucket
+    Value: !Ref CloudMartSAMArtifactsBucket
