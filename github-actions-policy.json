@@ -64,6 +64,7 @@
                 "ec2:ReplaceIamInstanceProfileAssociation",
                 "ec2:RunInstances",
                 "ec2:StopInstances",
+                "ec2:StartInstances",
                 "ec2:TerminateInstances",
                 "ec2:DescribeInstances",
                 "ec2:ModifyInstanceAttribute"
