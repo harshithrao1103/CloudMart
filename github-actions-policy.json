@@ -61,7 +61,11 @@
                 "ec2:DescribeInstanceStatus",
                 "ec2:AssociateIamInstanceProfile",
                 "ec2:DisassociateIamInstanceProfile",
-                "ec2:ReplaceIamInstanceProfileAssociation"
+                "ec2:ReplaceIamInstanceProfileAssociation",
+                "ec2:RunInstances",
+                "ec2:StopInstances",
+                "ec2:TerminateInstances",
+                "ec2:DescribeInstances"
             ],
             "Resource": "*"
         },
