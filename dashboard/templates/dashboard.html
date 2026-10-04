@@ -362,7 +362,7 @@
 
             display: grid;
 
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(4, minmax(0, 1fr));
 
             gap: 20px;
 
@@ -1633,6 +1633,36 @@
 
 
                     <div class="stat-card">
+                        <div class="stat-icon">✅</div>
+                        <div class="stat-title">Confirmed Orders</div>
+                        <div class="stat-value">{{ order_counts.confirmed }}</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon">⚙️</div>
+                        <div class="stat-title">Processing Orders</div>
+                        <div class="stat-value">{{ order_counts.processing }}</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon">🚚</div>
+                        <div class="stat-title">Shipped Orders</div>
+                        <div class="stat-value">{{ order_counts.shipped }}</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon">📬</div>
+                        <div class="stat-title">Delivered Orders</div>
+                        <div class="stat-value">{{ order_counts.delivered }}</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon">💰</div>
+                        <div class="stat-title">Total Sales</div>
+                        <div class="stat-value">₹{{ "{:,.2f}".format(total_sales) }}</div>
+                    </div>
+
+                    <div class="stat-card">
 
 
 
@@ -1649,9 +1679,7 @@
 
 
                         <div class="stat-value">
-
-                            Ready
-
+                            {{ report_status }}
                         </div>
 
 
