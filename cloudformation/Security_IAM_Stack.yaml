@@ -682,6 +682,11 @@ Resources:
                   - s3:ListBucket
                 Resource: !Sub arn:${AWS::Partition}:s3:::cloudmart-${Environment}-reports-${AWS::AccountId}
 
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Sub arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:cloudmart-${Environment}-flask-secret-*
+
   DashboardEC2InstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
