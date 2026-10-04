@@ -255,6 +255,12 @@
             ],
             "Resource": "*"
         }
+        ,
+        {
+            "Effect": "Allow",
+            "Action": "secretsmanager:GetRandomPassword",
+            "Resource": "*"
+        }
     ]
 }
 
