@@ -547,6 +547,21 @@
             margin-top: 22px;
         }
 
+
+        .report-date-picker { margin: 8px 0 22px; }
+        .report-date-picker h4 { font-size: 18px; margin-bottom: 7px; }
+        .report-date-controls { display: flex; align-items: center; gap: 12px; margin: 14px 0; }
+        .report-date-controls label { font-size: 14px; font-weight: 600; }
+        .report-date-controls input { padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font: inherit; color: #0f172a; }
+        .selected-report-preview { margin-top: 14px; }
+        .selected-report-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
+        .selected-report-toolbar strong { font-size: 15px; }
+        .selected-report-preview .table-container { max-height: 420px; overflow: auto; }
+        .selected-report-preview table { min-width: 600px; }
+        @media (max-width: 600px) {
+            .report-date-controls, .selected-report-toolbar { align-items: flex-start; flex-direction: column; }
+        }
+
         /* ================= PAGINATION ================= */
 
         .pagination {
@@ -2095,5 +2110,82 @@
 
     renderReports();
 </script>
-</body>
+
+<script>
+    (function () {
+        const dateInput = document.getElementById("reportDate");
+        if (!dateInput) return;
+
+        const status = document.getElementById("selectedReportStatus");
+        const preview = document.getElementById("selectedReportPreview");
+        const tableContainer = document.getElementById("selectedReportTable");
+        const title = document.getElementById("selectedReportTitle");
+        const download = document.getElementById("selectedReportDownload");
+
+        function showMessage(message) {
+            status.textContent = message;
+            status.hidden = false;
+            preview.hidden = true;
+        }
+
+        function buildTable(headers, rows) {
+            const table = document.createElement("table");
+            const thead = document.createElement("thead");
+            const headRow = document.createElement("tr");
+            headers.forEach(value => {
+                const th = document.createElement("th");
+                th.textContent = value;
+                headRow.appendChild(th);
+            });
+            thead.appendChild(headRow);
+            table.appendChild(thead);
+
+            const tbody = document.createElement("tbody");
+            rows.forEach(row => {
+                const tr = document.createElement("tr");
+                headers.forEach((_, index) => {
+                    const td = document.createElement("td");
+                    td.textContent = row[index] ?? "";
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+            table.appendChild(tbody);
+            return table;
+        }
+
+        dateInput.addEventListener("change", async function () {
+            const selectedDate = dateInput.value;
+            tableContainer.replaceChildren();
+            if (!selectedDate) {
+                showMessage("Select a date to check report availability.");
+                return;
+            }
+
+            showMessage("Checking report...");
+            try {
+                const response = await fetch(`/report/data/${encodeURIComponent(selectedDate)}`);
+                const data = await response.json();
+
+                if (response.status === 404 || data.available === false) {
+                    showMessage("No report is present on that day.");
+                    return;
+                }
+                if (!response.ok || !data.available) {
+                    showMessage(data.message || "Unable to load the report.");
+                    return;
+                }
+
+                status.hidden = true;
+                title.textContent = `Daily Report — ${selectedDate}`;
+                tableContainer.appendChild(buildTable(data.headers || [], data.rows || []));
+                download.href = `/report/download/${selectedDate.split("-").reverse().join("-")}`;
+                preview.hidden = false;
+            } catch (error) {
+                showMessage("Unable to retrieve the report. Please try again.");
+            }
+        });
+    })();
+</script>
+\n</body>
 </html>

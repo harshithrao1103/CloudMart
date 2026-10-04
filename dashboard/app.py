@@ -2,6 +2,8 @@ from flask import Flask, render_template, request, redirect, session, url_for, R
 import requests
 import boto3
 import os
+import csv
+import io
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -128,7 +130,8 @@ def dashboard():
         "dashboard.html",
         products=products,
         orders=orders,
-        reports=reports
+        reports=reports,
+        today_date=datetime.now(IST).date().isoformat()
     )
 @app.route("/api/customers")
 def customers():
@@ -277,6 +280,41 @@ def get_report_url(download=False):
     )
 
     return response
+
+
+
+
+@app.route("/report/data/<report_date>")
+def report_data(report_date):
+    if not session.get("admin_token"):
+        return {"message": "Unauthorized"}, 401
+
+    try:
+        parsed_date = datetime.strptime(report_date, "%Y-%m-%d").date()
+        if parsed_date.isoformat() != report_date:
+            raise ValueError
+    except ValueError:
+        return {"message": "Invalid report date."}, 400
+
+    key = f"daily-report-{report_date}.csv"
+
+    try:
+        obj = s3.get_object(Bucket=REPORTS_BUCKET, Key=key)
+        content = obj["Body"].read().decode("utf-8-sig")
+        reader = csv.reader(io.StringIO(content))
+        rows = list(reader)
+        if not rows:
+            return {"message": "Report is empty."}, 200
+        return {"available": True, "headers": rows[0], "rows": rows[1:]}
+    except s3.exceptions.NoSuchKey:
+        return {"available": False, "message": "No report is present on that day."}, 404
+    except Exception as e:
+        # S3 commonly reports missing objects as ClientError rather than NoSuchKey.
+        from botocore.exceptions import ClientError
+        if isinstance(e, ClientError) and e.response.get("Error", {}).get("Code") in ("404", "NoSuchKey", "NotFound"):
+            return {"available": False, "message": "No report is present on that day."}, 404
+        app.logger.exception("Unable to retrieve daily report")
+        return {"message": "Unable to retrieve the report."}, 502
 
 
 @app.route("/report/view")
