@@ -260,7 +260,15 @@
             "Effect": "Allow",
             "Action": "secretsmanager:GetRandomPassword",
             "Resource": "*"
-        }
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "secretsmanager:CreateSecret",
+                "secretsmanager:GetRandomPassword"
+            ],
+            "Resource": "*"
+}
     ]
 }
 
