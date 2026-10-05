@@ -1670,17 +1670,17 @@ def update_order_items(event, order_id):
                 )
 
             # =================================================
-            # ONLY CREATED ORDERS CAN CHANGE ITEMS
+            # CONFIRMED AND PROCESSING ORDERS CAN CHANGE ITEMS
             # =================================================
 
-            if order["status"] != "CREATED":
+            if order["status"] not in ("CONFIRMED", "PROCESSING"):
 
                 return response(
                     409,
                     {
                         "message":
                         "Order items can only be changed "
-                        "while order status is CREATED"
+                        "while order status is CONFIRMED or PROCESSING"
                     }
                 )
 
