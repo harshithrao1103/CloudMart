@@ -1824,6 +1824,75 @@ def update_order_items(event, order_id):
 
             old_items = cursor.fetchall()
 
+
+
+            # =================================================
+            # UPDATE INVENTORY BASED ON QUANTITY CHANGE
+            # =================================================
+
+            old_quantities = {
+                item["product_id"]: item["quantity"]
+                for item in old_items
+            }
+
+            new_quantities = {
+                item["product_id"]: item["quantity"]
+                for item in new_items
+            }
+
+            all_product_ids = set(old_quantities) | set(new_quantities)
+
+            for product_id in all_product_ids:
+
+                old_quantity = old_quantities.get(product_id, 0)
+                new_quantity = new_quantities.get(product_id, 0)
+
+                quantity_difference = new_quantity - old_quantity
+
+                if quantity_difference > 0:
+
+                    cursor.execute(
+                        """
+                        UPDATE inventory
+                        SET
+                            quantity = quantity - %s,
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE product_id = %s
+                        AND quantity >= %s
+                        """,
+                        (
+                            quantity_difference,
+                            product_id,
+                            quantity_difference
+                        )
+                    )
+
+                    if cursor.rowcount == 0:
+                        connection.rollback()
+
+                        return response(
+                            409,
+                            {
+                                "message":
+                                f"Insufficient inventory for product {product_id}"
+                            }
+                        )
+
+                elif quantity_difference < 0:
+
+                    cursor.execute(
+                        """
+                        UPDATE inventory
+                        SET
+                            quantity = quantity + %s,
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE product_id = %s
+                        """,
+                        (
+                            abs(quantity_difference),
+                            product_id
+                        )
+                    )
             # =================================================
             # DELETE OLD ITEMS
             # =================================================
