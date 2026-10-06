@@ -1,3 +1,21 @@
+# Network Stack
+#      │
+#      ├── VPC
+#      ├── Public Subnet
+#      ├── Private Subnet 1
+#      ├── Private Subnet 2
+#      ├── Internet Gateway
+#      ├── Public Route Table
+#      ├── Private Route Table
+#      ├── SES Security Group
+#      ├── SES Interface Endpoint
+#      ├── S3 Gateway Endpoint
+#      │
+#      └── Outputs
+#             │
+#             ▼
+#       Other CloudFormation Stacks
+
 AWSTemplateFormatVersion: '2010-09-09'
 
 Description: >

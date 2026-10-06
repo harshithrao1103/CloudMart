@@ -334,44 +334,7 @@ Resources:
               #     - sns:Publish
               #   Resource: '*'
 
-  # ==========================================================
-  # Statistics Lambda Role
-  # ==========================================================
-
-  StatisticsLambdaRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: !Sub CloudMart-${Environment}-StatisticsLambdaRole
-
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - lambda.amazonaws.com
-            Action:
-              - sts:AssumeRole
-
-      Policies:
-        - PolicyName: !Sub CloudMart-${Environment}-StatisticsLambdaM2Policy
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-
-              # CloudWatch Logs - Create Log Group
-              - Effect: Allow
-                Action:
-                  - logs:CreateLogGroup
-                Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cloudmart-${Environment}-statistics
-
-              # CloudWatch Logs - Create Stream and Write Logs
-              - Effect: Allow
-                Action:
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cloudmart-${Environment}-statistics:*
-
+  
   # ==========================================================
   # EC2 SECURITY GROUP
   # ==========================================================
@@ -904,11 +867,6 @@ Outputs:
     Export:
       Name: !Sub CloudMart-${Environment}-OrderLambdaRoleArn
 
-  StatisticsLambdaRoleArn:
-    Description: Statistics Lambda IAM Role ARN
-    Value: !GetAtt StatisticsLambdaRole.Arn
-    Export:
-      Name: !Sub CloudMart-${Environment}-StatisticsLambdaRoleArn
 
   EC2SecurityGroupId:
     Description: CloudMart EC2 Security Group ID
