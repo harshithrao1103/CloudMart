@@ -173,6 +173,8 @@ Resources:
             Path: /products
             Method: get
             PayloadFormatVersion: "2.0"
+            Auth:
+              Authorizer: NONE
 
         # ======================================================
         # GET /products/{productId}
@@ -185,6 +187,8 @@ Resources:
             Path: /products/{productId}
             Method: get
             PayloadFormatVersion: "2.0"
+            Auth:
+              Authorizer: NONE
 
         # ======================================================
         # PUT /products/{productId}
