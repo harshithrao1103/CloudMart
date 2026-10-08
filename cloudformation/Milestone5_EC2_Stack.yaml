@@ -1,3 +1,25 @@
+# ==========================================================
+# CLOUDMART MILESTONE 5 EC2 DASHBOARD STACK
+# ==========================================================
+#
+# PARAMETERS
+#
+# FLASK SESSION SECRET
+#
+# DASHBOARD EC2 INSTANCE
+#
+# EC2 USER DATA
+#
+# SYSTEMD DASHBOARD SERVICE
+#
+# NGINX CONFIGURATION
+#
+# EC2 TAGS
+#
+# OUTPUTS
+#
+# ==========================================================
+
 AWSTemplateFormatVersion: '2010-09-09'
 
 Description: >
@@ -107,7 +129,8 @@ Resources:
               WantedBy=multi-user.target
               SERVICEEOF
 
-              cat > /etc/nginx/conf.d/cloudmart-dashboard.conf <<'NGINXEOF'
+              cat > /etc/nginx/conf.d/cloudmart-dashboard.conf <<'NGINXEOF'  
+            
               server {
                   listen 80;
                   server_name _;

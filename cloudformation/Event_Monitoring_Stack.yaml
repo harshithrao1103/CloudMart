@@ -1,3 +1,25 @@
+# ==========================================================
+# CLOUDMART MILESTONE 5 MONITORING STACK
+# ==========================================================
+#
+# PARAMETERS
+#
+# SNS MONITORING TOPICS
+#
+# SNS SUBSCRIPTIONS
+#
+# SNS -> ALARM NOTIFICATION LAMBDA PERMISSION
+#
+# CLOUDWATCH ALARMS
+#
+# CLOUDWATCH OPERATIONS DASHBOARD
+#
+# DASHBOARD METRICS
+#
+# OUTPUTS
+#
+# ==========================================================
+
 AWSTemplateFormatVersion: '2010-09-09'
 
 Description: CloudMart Milestone 5 Monitoring Stack.

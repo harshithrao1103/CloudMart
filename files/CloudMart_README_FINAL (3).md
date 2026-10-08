@@ -697,7 +697,7 @@ PUT    /customers/{customerId}
 DELETE /customers/{customerId}
 
 Products
-GET    /products
+GET    /products  
 GET    /products/{productId}
 
 Orders

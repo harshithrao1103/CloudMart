@@ -1,3 +1,36 @@
+#  ==========================================================
+# # CLOUDMART SECURITY & IAM STACK
+# # ==========================================================
+# #
+# # Purpose:
+# #   Creates the IAM roles, security groups, and VPC endpoints
+# #   required for CloudMart application and Milestone 5
+# #   infrastructure.
+# #
+# # IAM ROLES:
+# #   - Lambda Authorizer Role
+# #   - Product Lambda Role
+# #   - Customer Lambda Role
+# #   - Login Lambda Role
+# #   - Order Lambda Role
+# #   - Notification Lambda Role
+# #   - Dashboard EC2 Role
+# #   - Dashboard Lambda Role
+# #   - Daily Report Lambda Role
+# #   - Low Stock Metrics Lambda Role
+# #
+# # SECURITY GROUPS:
+# #   - EC2 Security Group
+# #   - Lambda Security Group
+# #   - RDS Security Group
+# #   - SSM VPC Endpoint Security Group
+# #   - EventBridge VPC Endpoint Security Group
+# #
+# # VPC ENDPOINTS:
+# #   - SSM Interface VPC Endpoint
+# #   - EventBridge Interface VPC Endpoint
+# #
+
 AWSTemplateFormatVersion: '2010-09-09'
 
 Description: >
@@ -51,7 +84,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - logs:CreateLogGroup
-                Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cloudmart-${Environment}-authorizer
+                Resource: "*"
 
               # CloudWatch Logs - Create Stream and Write Logs
               - Effect: Allow
@@ -101,8 +134,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - logs:CreateLogGroup
-                Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cloudmart-${Environment}-product
-
+                Resource: 
               # CloudWatch Logs - Create Stream and Write Logs
               - Effect: Allow
                 Action:
@@ -162,7 +194,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - logs:CreateLogGroup
-                Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cloudmart-${Environment}-customer
+                Resource: "*"
 
               # CloudWatch Logs - Create Stream and Write Logs
               - Effect: Allow
@@ -223,7 +255,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - logs:CreateLogGroup
-                Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cloudmart-${Environment}-login
+                Resource: "*"
 
               # CloudWatch Logs - Create Stream and Write Logs
               - Effect: Allow

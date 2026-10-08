@@ -1,3 +1,31 @@
+# ============================================================
+# CLOUDMART CUSTOMER LAMBDA
+# ============================================================
+#
+# AWS CLIENTS
+#
+# ENVIRONMENT VARIABLES
+#
+# DATABASE CONNECTION
+#
+# HTTP RESPONSE
+#
+# PASSWORD HASHING
+#
+# GET USER ID FROM PATH
+#
+# CREATE CUSTOMER / USER
+#
+# GET CUSTOMER
+#
+# UPDATE CUSTOMER
+#
+# DELETE CUSTOMER
+#
+# LAMBDA HANDLER
+#
+# ============================================================
+
 import json
 import os
 import boto3
@@ -113,7 +141,7 @@ def hash_password(password):
         password.encode("utf-8"),
         salt,
         310000
-    )
+    )   
 
     encoded_salt = base64.b64encode(salt).decode("utf-8")
     encoded_hash = base64.b64encode(password_hash).decode("utf-8")
