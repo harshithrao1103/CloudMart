@@ -134,7 +134,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - logs:CreateLogGroup
-                Resource: 
+                Resource: "*"
               # CloudWatch Logs - Create Stream and Write Logs
               - Effect: Allow
                 Action:
